@@ -1,5 +1,394 @@
 
 ###################
+#Fig2
+##################
+svim reads --nanopore BmN4_svim /home/kshoji/Gawain/NGSdata/191113BmN4genome_MINION.fastq /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa            # align Nanopore reads with ngmlr, then call SVs
+#and check by eyes
+
+
+
+
+#220209_torimochi_newins.fasをmegaでアライメントしてfastaで書き出す。
+220209_torimochi_aln.fas
+
+#アライメントファイルを指定する
+snp-sites -v -o 220209_torimochi_aln0.vcf 220209_torimochi_aln.fas
+
+sed s/^1/chr03_newins/ 220209_torimochi_aln0.vcf  > 220209_torimochi_aln.vcf 
+#この後、上のコメントアウトのcontig IDを書き換える
+
+
+
+bowtie-build torimochi03.fasta torimochi03
+
+( bowtie --offrate 3 -p 20 -a --best --strata -v 3  -t --sam torimochi03 -f /home/kshoji/Gawain/NGSdata/181220_P1_Naïve_Total_NaIO4m_trim.fasta.gz  > 181220_P1_Naïve_Total_NaIO4m_trim_trim_torimochi03_bt.sam )  
+samtools view -@ 20 -bS 181220_P1_Naïve_Total_NaIO4m_trim_trim_torimochi03_bt.sam > 181220_P1_Naïve_Total_NaIO4m_trim_trim_torimochi03_bt.bam
+bamToBed -i 181220_P1_Naïve_Total_NaIO4m_trim_trim_torimochi03_bt.bam > 181220_P1_Naïve_Total_NaIO4m_trim_trim_torimochi03_bt.bed
+
+
+R
+library(Biostrings)
+library(Rsamtools)
+
+bam <- scanBam("181220_P1_Naïve_Total_NaIO4m_trim_trim_torimochi03_bt.bam")
+#> names(bam[[1]])
+# [1] "qname"  "flag"   "rname"  "strand" "pos"    "qwidth" "mapq"   "cigar" 
+# [9] "mrnm"   "mpos"   "isize"  "seq"    "qual"  
+chr3 <- bam[[1]]$rname == "chr03_newins"
+chr3[is.na(chr3)] <- F
+#head(bam[[1]]$pos[chr3])
+
+pos <- bam[[1]]$pos[chr3]
+qname <- bam[[1]]$qname[chr3]
+qwidth <- bam[[1]]$qwidth[chr3]
+cigar <- bam[[1]]$cigar[chr3]
+seq <- bam[[1]]$seq[chr3]
+qual <- bam[[1]]$qual[chr3]
+strand <- bam[[1]]$strand[chr3]
+
+
+seq2 <- seq
+for(i in 1:8725){
+
+tag <- pos ==i
+ins <- paste(rep("N",i-1),collapse="")
+
+seq2[tag] <- paste0(ins,seq[tag])
+
+cat(i)
+}
+
+write.table(t(consensusMatrix(seq2[strand=="+"])[1:4,]),"210329_torimochi03_variant_table_sense.txt",sep="\t",quote=F)
+write.table(t(consensusMatrix(seq2[strand=="-"])[1:4,]),"210329_torimochi03_variant_table_antisense.txt",sep="\t",quote=F)
+
+QQ="torimochi03"
+for Q in ${QQ};do
+NN="170124_OV1_MLVminus"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 3 -t --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${N}_trim2.fasta.gz  > ${N}_${Q}_bt.sam )  
+	samtools view -@ 20 -bS ${N}_${Q}_bt.sam > ${N}_${Q}_bt.bam
+bamToBed -i ${N}_${Q}_bt.bam > ${N}_${Q}_bt.bed
+rm ${N}_${Q}.sam
+
+done
+done
+
+
+
+R
+library(Biostrings)
+library(Rsamtools)
+
+bam <- scanBam("170124_OV1_MLVminus_torimochi03_bt.bam")
+#> names(bam[[1]])
+# [1] "qname"  "flag"   "rname"  "strand" "pos"    "qwidth" "mapq"   "cigar" 
+# [9] "mrnm"   "mpos"   "isize"  "seq"    "qual"  
+chr3 <- bam[[1]]$rname == "chr03_newins"
+chr3[is.na(chr3)] <- F
+#head(bam[[1]]$pos[chr3])
+
+pos <- bam[[1]]$pos[chr3]
+qname <- bam[[1]]$qname[chr3]
+qwidth <- bam[[1]]$qwidth[chr3]
+cigar <- bam[[1]]$cigar[chr3]
+seq <- bam[[1]]$seq[chr3]
+qual <- bam[[1]]$qual[chr3]
+strand <- bam[[1]]$strand[chr3]
+
+
+seq2 <- seq
+for(i in 1:8725){
+
+tag <- pos ==i
+ins <- paste(rep("N",i-1),collapse="")
+
+seq2[tag] <- paste0(ins,seq[tag])
+
+cat(i)
+}
+
+write.table(t(consensusMatrix(seq2[strand=="+"])[1:4,]),"221117_torimochi03_variant_table_OVpiRNA_sense.txt",sep="\t",quote=F)
+write.table(t(consensusMatrix(seq2[strand=="-"])[1:4,]),"221117_torimochi03_variant_table_OVpiRNA_antisense.txt",sep="\t",quote=F)
+
+
+
+
+#RNA-seq
+171128_1_pIZ
+DRR186503_NIAS_OV
+
+gunzip 171128_1_pIZ_R1.fastq.gz  
+gunzip 171128_1_pIZ_R2.fastq.gz
+
+seqkit subseq -r 1:33 171128_1_pIZ_R1.fastq > 171128_1_pIZ_R1_1st.fastq
+seqkit subseq -r 34:66 171128_1_pIZ_R1.fastq > 171128_1_pIZ_R1_2nd.fastq
+seqkit subseq -r 67:99 171128_1_pIZ_R1.fastq > 171128_1_pIZ_R1_3rd.fastq
+seqkit subseq -r 1:33 171128_1_pIZ_R2.fastq > 171128_1_pIZ_R2_1st.fastq
+seqkit subseq -r 34:66 171128_1_pIZ_R2.fastq > 171128_1_pIZ_R2_2nd.fastq
+seqkit subseq -r 67:99 171128_1_pIZ_R2.fastq > 171128_1_pIZ_R2_3rd.fastq
+
+cat 171128_1_pIZ_R1_1st.fastq 171128_1_pIZ_R1_2nd.fastq 171128_1_pIZ_R1_3rd.fastq > 171128_1_pIZ_33cut_R1.fastq
+cat 171128_1_pIZ_R2_1st.fastq 171128_1_pIZ_R2_2nd.fastq 171128_1_pIZ_R2_3rd.fastq > 171128_1_pIZ_33cut_R2.fastq
+seqkit rename 171128_1_pIZ_33cut_R1.fastq -n > 171128_1_pIZ_33cut_R1_rename.fastq
+seqkit rename 171128_1_pIZ_33cut_R2.fastq -n > 171128_1_pIZ_33cut_R2_rename.fastq
+pigz 171128_1_pIZ_33cut_R1_rename.fastq
+pigz 171128_1_pIZ_33cut_R2_rename.fastq
+
+unpigz DRR186503_NIAS_OV_R1.fastq.gz  
+unpigz DRR186503_NIAS_OV_R2.fastq.gz
+
+seqkit subseq -r 1:33 DRR186503_NIAS_OV_R1.fastq > DRR186503_NIAS_OV_R1_1st.fastq
+seqkit subseq -r 34:66 DRR186503_NIAS_OV_R1.fastq > DRR186503_NIAS_OV_R1_2nd.fastq
+seqkit subseq -r 67:99 DRR186503_NIAS_OV_R1.fastq > DRR186503_NIAS_OV_R1_3rd.fastq
+seqkit subseq -r 1:33 DRR186503_NIAS_OV_R2.fastq > DRR186503_NIAS_OV_R2_1st.fastq
+seqkit subseq -r 34:66 DRR186503_NIAS_OV_R2.fastq > DRR186503_NIAS_OV_R2_2nd.fastq
+seqkit subseq -r 67:99 DRR186503_NIAS_OV_R2.fastq > DRR186503_NIAS_OV_R2_3rd.fastq
+
+cat DRR186503_NIAS_OV_R1_1st.fastq DRR186503_NIAS_OV_R1_2nd.fastq DRR186503_NIAS_OV_R1_3rd.fastq > DRR186503_NIAS_OV_33cut_R1.fastq
+cat DRR186503_NIAS_OV_R2_1st.fastq DRR186503_NIAS_OV_R2_2nd.fastq DRR186503_NIAS_OV_R2_3rd.fastq > DRR186503_NIAS_OV_33cut_R2.fastq
+seqkit rename DRR186503_NIAS_OV_33cut_R1.fastq -n > DRR186503_NIAS_OV_33cut_R1_rename.fastq
+seqkit rename DRR186503_NIAS_OV_33cut_R2.fastq -n > DRR186503_NIAS_OV_33cut_R2_rename.fastq
+pigz DRR186503_NIAS_OV_33cut_R1_rename.fastq
+pigz DRR186503_NIAS_OV_33cut_R2_rename.fastq
+
+
+bowtie-build torimochi03.fasta torimochi03
+
+QQ="torimochi03"
+for Q in ${QQ};do
+NN="DRR186503_NIAS_OV_33cut_R1_rename DRR186503_NIAS_OV_33cut_R2_rename 171128_1_pIZ_33cut_R1_rename 171128_1_pIZ_33cut_R2_rename"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 3 -t --sam ${Q} -fq /home/kshoji/Gawain/NGSdata/${N}.fastq.gz  > ${N}_${Q}_bt.sam )  
+	samtools view -@ 20 -bS ${N}_${Q}_bt.sam > ${N}_${Q}_bt.bam
+bamToBed -i ${N}_${Q}_bt.bam > ${N}_${Q}_bt.bed
+rm ${N}_${Q}_bt.sam
+
+done
+done
+
+R
+library(Biostrings)
+library(Rsamtools)
+
+names <- c("DRR186503_NIAS_OV_33cut_R1_rename","DRR186503_NIAS_OV_33cut_R2_rename","171128_1_pIZ_33cut_R1_rename","171128_1_pIZ_33cut_R2_rename")
+
+for(j in 1:length(names)){
+
+bam <- scanBam(paste0(names[j],"_torimochi03_bt.bam"))
+#> names(bam[[1]])
+# [1] "qname"  "flag"   "rname"  "strand" "pos"    "qwidth" "mapq"   "cigar" 
+# [9] "mrnm"   "mpos"   "isize"  "seq"    "qual"  
+chr3 <- bam[[1]]$rname == "chr03_newins"
+chr3[is.na(chr3)] <- F
+#head(bam[[1]]$pos[chr3])
+
+pos <- bam[[1]]$pos[chr3]
+qname <- bam[[1]]$qname[chr3]
+qwidth <- bam[[1]]$qwidth[chr3]
+cigar <- bam[[1]]$cigar[chr3]
+seq <- bam[[1]]$seq[chr3]
+qual <- bam[[1]]$qual[chr3]
+strand <- bam[[1]]$strand[chr3]
+
+
+seq2 <- seq
+for(i in 1:8725){
+
+tag <- pos ==i
+ins <- paste(rep("N",i-1),collapse="")
+
+seq2[tag] <- paste0(ins,seq[tag])
+
+cat(i)
+}
+
+write.table(t(consensusMatrix(seq2[strand=="+"])[1:4,]),paste0("221117_torimochi03_variant_table_",names[j],"_sense.txt"),sep="\t",quote=F)
+write.table(t(consensusMatrix(seq2[strand=="-"])[1:4,]),paste0("221117_torimochi03_variant_table_",names[j],"_antisense.txt"),sep="\t",quote=F)
+}
+
+#作図
+
+setwd("~/Desktop/datas/info/torimochi")
+library(ggplot2)
+library(ggthemes)
+library(Biostrings)
+library(ggsci)
+library(RColorBrewer)
+library(reshape2)
+strain<- read.table("220209_torimochi_aln.vcf")
+library(maptools)
+site<-c(1769,1858,1961,2131,2133,2338,2417,2587,2590,2621,2800,2861,2904,3042,3247,3376,
+        3501,3654,3885,3930,4083,4086,4101,4287,4591,4597,4650,4707,4774,4846,4857,4980,
+        5001,5004,5046,5112,5250,5562,5682,5688,5703,5898,5943,6108,6231,6273,6306,6461,
+        6561,6624,6645,6747,7030,7033,7123,7405,8062,8085,8221,8244,8270)
+
+
+anti <-read.table("210329_torimochi03_variant_table_antisense.txt")
+sense <-read.table("210329_torimochi03_variant_table_sense.txt")
+
+
+anti2 <- sweep(anti,1,apply(anti,1,sum),"/")
+sense2 <- sweep(sense,1,apply(sense,1,sum),"/")
+anti3 <- anti2[site,]
+rownames(anti3) <- site
+sense3 <- sense2[site,]
+antiB <- data.frame("nucleotide"=c(rep("A",nrow(anti3)),rep("C",nrow(anti3)),rep("G",nrow(anti3)),rep("T",nrow(anti3))),
+                    "position"=rep(1:nrow(anti3),4),
+                    "ratio"=c(anti3[,1],anti3[,2],anti3[,3],anti3[,4]))
+senseB <- data.frame("nucleotide"=c(rep("A",nrow(sense3)),rep("C",nrow(sense3)),rep("G",nrow(sense3)),rep("T",nrow(sense3))),
+                    "position"=rep(1:nrow(sense3),4),
+                    "ratio"=c(sense3[,1],sense3[,2],sense3[,3],sense3[,4]))
+
+
+
+senseBm <- cbind(senseB,RNA="piRNA sense")
+antiBm <- cbind(antiB,RNA="piRNA antisense")
+
+BOX <- rbind(senseBm,antiBm,senseRBm,antiRBm,Input1Bm,H27Bm)
+
+
+
+g <- ggplot(senseB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="Sense piRNA",x="SNPs position",y="Ratio")+scale_x_continuous(breaks = c(1,10,20,30,40,50,60),labels=c(1,10,20,30,40,50,60))
+plot(g)
+ggsave(file = "220513_sense_piRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+g <- ggplot(antiB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="Antisense piRNA",x="SNPs position",y="Ratio") +scale_x_continuous(breaks = c(1,10,20,30,40,50,60),labels=c(1,10,20,30,40,50,60))
+plot(g)
+ggsave(file = "220513_antisense_piRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+
+
+senseRA <- read.table("221117_torimochi03_variant_table_171128_1_pIZ_33cut_R2_rename_sense.txt")
+antiRA <- read.table("221117_torimochi03_variant_table_171128_1_pIZ_33cut_R2_rename_antisense.txt")
+senseRB <- read.table("221117_torimochi03_variant_table_171128_1_pIZ_33cut_R1_rename_sense.txt")
+antiRB <- read.table("221117_torimochi03_variant_table_171128_1_pIZ_33cut_R1_rename_antisense.txt")
+
+senseR <- senseRA + antiRB
+antiR <- antiRA + senseRB
+
+antiR2 <- sweep(antiR,1,apply(antiR,1,sum),"/")
+senseR2 <- sweep(senseR,1,apply(senseR,1,sum),"/")
+antiR3 <- antiR2[site,]
+rownames(antiR3) <- site
+senseR3 <- senseR2[site,]
+antiRB <- data.frame("nucleotide"=c(rep("A",nrow(antiR3)),rep("C",nrow(antiR3)),rep("G",nrow(antiR3)),rep("T",nrow(antiR3))),
+                     "position"=rep(1:nrow(antiR3),4),
+                     "ratio"=c(antiR3[,1],antiR3[,2],antiR3[,3],antiR3[,4]))
+senseRB <- data.frame("nucleotide"=c(rep("A",nrow(senseR3)),rep("C",nrow(senseR3)),rep("G",nrow(senseR3)),rep("T",nrow(senseR3))),
+                      "position"=rep(1:nrow(senseR3),4),
+                      "ratio"=c(senseR3[,1],senseR3[,2],senseR3[,3],senseR3[,4]))
+
+
+
+g <- ggplot(senseRB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="Sense mRNA",x="SNPs position",y="Ratio")+scale_x_continuous(breaks = c(1,10,20,30,40,50,60),labels=c(1,10,20,30,40,50,60))
+plot(g)
+ggsave(file = "221117_sense_mRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+g <- ggplot(antiRB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="Antisense mRNA",x="SNPs position",y="Ratio") +scale_x_continuous(breaks = c(1,10,20,30,40,50,60),labels=c(1,10,20,30,40,50,60))
+plot(g)
+ggsave(file = "221117_antisense_mRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+
+
+cbind(apply(senseR[site,],1,sum),
+      apply(antiR[site,],1,sum))
+
+
+antiOV <-read.table("221117_torimochi03_variant_table_OVpiRNA_antisense.txt")
+senseOV <-read.table("221117_torimochi03_variant_table_OVpiRNA_sense.txt")
+
+
+antiOV2 <- sweep(antiOV,1,apply(antiOV,1,sum),"/")
+senseOV2 <- sweep(senseOV,1,apply(senseOV,1,sum),"/")
+antiOV3 <- antiOV2[site,]
+rownames(antiOV3) <- site
+senseOV3 <- senseOV2[site,]
+antiOVB <- data.frame("nucleotide"=c(rep("A",nrow(antiOV3)),rep("C",nrow(antiOV3)),rep("G",nrow(antiOV3)),rep("T",nrow(antiOV3))),
+                    "position"=rep(1:nrow(antiOV3),4),
+                    "ratio"=c(antiOV3[,1],antiOV3[,2],antiOV3[,3],antiOV3[,4]))
+senseOVB <- data.frame("nucleotide"=c(rep("A",nrow(senseOV3)),rep("C",nrow(senseOV3)),rep("G",nrow(senseOV3)),rep("T",nrow(senseOV3))),
+                     "position"=rep(1:nrow(senseOV3),4),
+                     "ratio"=c(senseOV3[,1],senseOV3[,2],senseOV3[,3],senseOV3[,4]))
+
+
+
+g <- ggplot(senseOVB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="sense piRNA",x="SNPs position")
+plot(g)
+ggsave(file = "221117_sense_OV_piRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+g <- ggplot(antiOVB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="antisense piRNA",x="SNPs position")
+plot(g)
+ggsave(file = "221117_antisense_OV_piRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+
+cbind(apply(senseOV[site,],1,sum),
+      apply(antiOV[site,],1,sum))
+
+
+senseOVRA <- read.table("221117_torimochi03_variant_table_DRR186503_NIAS_OV_33cut_R2_rename_sense.txt")
+antiOVRA <- read.table("221117_torimochi03_variant_table_DRR186503_NIAS_OV_33cut_R2_rename_antisense.txt")
+senseOVRB <- read.table("221117_torimochi03_variant_table_DRR186503_NIAS_OV_33cut_R1_rename_sense.txt")
+antiOVRB <- read.table("221117_torimochi03_variant_table_DRR186503_NIAS_OV_33cut_R1_rename_antisense.txt")
+
+senseOVR <- rbind(senseOVRA,senseOVRA[1:3,]) + antiOVRB
+antiOVR <- antiOVRA + rbind(senseOVRB,senseOVRB[1:3,])
+
+antiOVR2 <- sweep(antiOVR,1,apply(antiOVR,1,sum),"/")
+senseOVR2 <- sweep(senseOVR,1,apply(senseOVR,1,sum),"/")
+antiOVR3 <- antiOVR2[site,]
+rownames(antiOVR3) <- site
+senseOVR3 <- senseOVR2[site,]
+antiOVR3[is.nan(as.matrix(antiOVR3))] <- 0
+senseOVR3[is.nan(as.matrix(senseOVR3))] <- 0
+antiOVRB <- data.frame("nucleotide"=c(rep("A",nrow(antiOVR3)),rep("C",nrow(antiOVR3)),rep("G",nrow(antiOVR3)),rep("T",nrow(antiOVR3))),
+                     "position"=rep(1:nrow(antiOVR3),4),
+                     "ratio"=c(antiOVR3[,1],antiOVR3[,2],antiOVR3[,3],antiOVR3[,4]))
+senseOVRB <- data.frame("nucleotide"=c(rep("A",nrow(senseOVR3)),rep("C",nrow(senseOVR3)),rep("G",nrow(senseOVR3)),rep("T",nrow(senseOVR3))),
+                      "position"=rep(1:nrow(senseOVR3),4),
+                      "ratio"=c(senseOVR3[,1],senseOVR3[,2],senseOVR3[,3],senseOVR3[,4]))
+
+
+
+g <- ggplot(senseOVRB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="Sense mRNA",x="SNPs position",y="Ratio")+scale_x_continuous(breaks = c(1,10,20,30,40,50,60),labels=c(1,10,20,30,40,50,60))
+plot(g)
+ggsave(file = "221117_sense_OV_mRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+g <- ggplot(antiOVRB, aes(x = position, y = ratio, fill = nucleotide))
+g <- g + geom_bar(stat = "identity", position = "fill")+ theme_bw(base_size = 15, base_family = "Helvetica")
+g <- g + scale_fill_brewer(palette = "Set3") + labs(title="Antisense mRNA",x="SNPs position",y="Ratio") +scale_x_continuous(breaks = c(1,10,20,30,40,50,60),labels=c(1,10,20,30,40,50,60))
+plot(g)
+ggsave(file = "221117_antisense_OV_mRNA_SNPs.pdf", plot = g, width = 11, height = 2.5)
+
+
+
+cbind(apply(senseOVR[site,],1,sum),
+      apply(antiOVR[site,],1,sum))
+
+cbind(apply(sense[site,],1,sum),
+apply(anti[site,],1,sum),
+apply(senseR[site,],1,sum),
+apply(antiR[site,],1,sum))
+
+
+###################
 #FigS3
 ##################
 Rscript --slave --vanilla /home/kshoji/Gawain/scripts/fasta2bed.R 210824_torimochi_chr13_GFPnotoko
