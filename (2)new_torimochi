@@ -1,0 +1,225 @@
+
+###################
+#FigS3
+##################
+Rscript --slave --vanilla /home/kshoji/Gawain/scripts/fasta2bed.R 210824_torimochi_chr13_GFPnotoko
+
+bowtie-build toricore_pm10kb.fas toricore_pm10kb
+
+
+#V2
+QQ="220209_newins_around toricore_pm10kb"
+for Q in ${QQ};do
+NN="181220_P1_Naïve_Total_NaIO4m 170124_OV1_MLVminus"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 2 -t --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${N}_trim.fasta.gz  > ${N}_${Q}.sam )  
+	samtools view -@ 20 -bS ${N}_${Q}.sam > ${N}_${Q}.bam
+bamToBed -i ${N}_${Q}.bam > ${N}_${Q}.bed
+rm ${N}_${Q}.sam
+rm ${N}_${Q}.bam
+	awk '$3-$2>22' ${N}_${Q}.bed > ${N}_${Q}_piRNA.bed
+
+coverageBed -b ${N}_${Q}_piRNA.bed -a ${Q}.bed -s -d> ${N}_${Q}_plus.txt
+coverageBed -b ${N}_${Q}_piRNA.bed -a ${Q}.bed -S -d> ${N}_${Q}_minus.txt
+done
+done
+done
+
+
+#V0
+QQ="220209_torimochi_newins "
+for Q in ${QQ};do
+NN="181220_P1_Naïve_Total_NaIO4m 170124_OV1_MLVminus"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 0 -t --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${N}_trim.fasta.gz  > ${N}_${Q}.sam )  
+	samtools view -@ 20 -bS ${N}_${Q}.sam > ${N}_${Q}.bam
+bamToBed -i ${N}_${Q}.bam > ${N}_${Q}.bed
+	awk '$3-$2>22' ${N}_${Q}.bed > ${N}_${Q}_piRNA.bed
+
+rm ${N}_${Q}.sam
+rm ${N}_${Q}.bam
+coverageBed -b ${N}_${Q}_piRNA.bed -a ${Q}.bed -s -d> ${N}_${Q}_plus.txt
+coverageBed -b ${N}_${Q}_piRNA.bed -a ${Q}.bed -S -d> ${N}_${Q}_minus.txt
+done
+done
+done
+
+
+
+bowtie-build -f /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa Bomo_genome
+#total mapped reads計算
+
+#V2
+QQ="Bomo_genome"
+for Q in ${QQ};do
+PP="181220_"
+for P in ${PP};do
+NN="P1_Naïve_Total_NaIO4m"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 2 -t -m 1 --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${P}${N}_trim.fasta.gz  > ${P}${N}_${Q}.sam )  
+	samtools view -@ 20 -bS ${P}${N}_${Q}.sam > ${P}${N}_${Q}.bam
+bamToBed -i ${P}${N}_${Q}.bam > ${P}${N}_${Q}.bed
+rm ${P}${N}_${Q}.sam
+rm ${P}${N}_${Q}.bam
+done
+done
+done
+
+QQ="Bomo_genome"
+for Q in ${QQ};do
+PP="170124_"
+for P in ${PP};do
+NN="OV1_MLVminus"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 2 -t -m 1 --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${P}${N}_trim2.fasta.gz  > ${P}${N}_${Q}.sam )  
+	samtools view -@ 20 -bS ${P}${N}_${Q}.sam > ${P}${N}_${Q}.bam
+bamToBed -i ${P}${N}_${Q}.bam > ${P}${N}_${Q}.bed
+rm ${P}${N}_${Q}.sam
+rm ${P}${N}_${Q}.bam
+done
+done
+
+
+QQ="Bomo_genome"
+for Q in ${QQ};do
+NN="171128_1_pIZ DRR186503_NIAS_OV"
+for N in  ${NN}; do
+        echo $N
+hisat2 -x ${Q} -1 /home/kshoji/Gawain/NGSdata/${N}_R1.fastq.gz  -2 /home/kshoji/Gawain/NGSdata/${N}_R2.fastq.gz -k 3 -p 20 -S ${N}_${Q}_HS2.sam
+samtools view -@ 20 -bS ${N}_${Q}_HS2.sam > ${N}_${Q}_HS2.bam
+bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
+ rm ${N}_${Q}_HS2.sam
+done
+done
+
+
+
+#BmN4 18169997
+#OV 86281176
+
+###################
+#FigS3A-H
+##################
+R
+library(ggplot2)
+totalo <- 134261868
+totalq <- 43864953
+
+tovp <- read.table("170124_OV1_MLVminus_220209_torimochi_newins_plus.txt")
+tovm <- read.table("170124_OV1_MLVminus_220209_torimochi_newins_minus.txt")
+tBmQp <- read.table("181220_P1_Naïve_Total_NaIO4m_220209_torimochi_newins_plus.txt")
+tBmQm <- read.table("181220_P1_Naïve_Total_NaIO4m_220209_torimochi_newins_minus.txt")
+aovp <- read.table("170124_OV1_MLVminus_220209_newins_around_plus.txt")
+aovm <- read.table("170124_OV1_MLVminus_220209_newins_around_minus.txt")
+aBmQp <- read.table("181220_P1_Naïve_Total_NaIO4m_220209_newins_around_plus.txt")
+aBmQm <- read.table("181220_P1_Naïve_Total_NaIO4m_220209_newins_around_minus.txt")
+
+names <- c("chr03_newins","chr06_newins","chr06_2_newins","chr11_newins","chr13_newins","chr17_newins","chr21_newins","chr23_newins")
+titles <- c("chr03","chr06","chr06_2","chr11","chr13","chr17","chr21","chr23")
+for(i in 1:8){
+tag <- names[i]
+if(i ==3){
+dwposi <- grep(paste0("Bomo_Chr",as.numeric(substr(tag,4,5)),"_2_newins_dw"),aBmQp[,1])
+upposi <- grep(paste0("Bomo_Chr",as.numeric(substr(tag,4,5)),"_2_newins_up"),aBmQp[,1])
+}else{
+dwposi <- grep(paste0("Bomo_Chr",as.numeric(substr(tag,4,5)),"_newins_dw"),aBmQp[,1])
+upposi <- grep(paste0("Bomo_Chr",as.numeric(substr(tag,4,5)),"_newins_up"),aBmQp[,1])
+}
+Y1 <- c(aBmQp[upposi,8],tBmQp[tBmQp[,1]==tag,8],aBmQp[dwposi,8])/totalq*1000000
+Y2 <- c(-aBmQm[upposi,8],-tBmQm[tBmQm[,1]==tag,8],-aBmQm[dwposi,8])/totalq*1000000
+Y3 <- c(aovp[upposi,8],tovp[tovp[,1]==tag,8],aovp[dwposi,8])/totalo*1000000
+Y4 <- c(-aovm[upposi,8],-tovm[tovm[,1]==tag,8],-aovm[dwposi,8])/totalo*1000000
+len <- length(Y1)
+
+
+DATA <- data.frame(c(rep("BmN4",len),rep("BmN4",len),rep("Ovary",len),rep("Ovary",len)),
+      c(1:len,1:len,1:len,1:len),
+      c(Y1,Y2,Y3,Y4))
+	  
+DATA[,1] <- factor(DATA[,1],levels=c("BmN4","Ovary"))
+colnames(DATA) <- c("PIWI","position","RPM")
+p0 <- ggplot(data = DATA, mapping = aes(x = position, y = RPM))
+p0 <- p0 + facet_grid(PIWI ~ .)+ ggtitle(titles[i])
+p0 <- p0 + geom_bar(stat = "identity", position = "dodge")
+p0 <- p0 + theme_bw(base_size = 15, base_family = "Helvetica")
+p0 <- p0 + geom_vline(xintercept=c(5000+0.5,len-5000+0.5),colour="grey")
+ggsave(file = paste0("220222_",tag,"_piRNA_profile.png"), plot = p0, dpi = 200, width = 6, height = 3.5)
+
+}
+
+
+###################
+#FigS3J
+##################
+
+
+bowtie-build -f 211005_torimochi_chr13_pPIGA3.fas 211005_torimochi_chr13_pPIGA3
+
+QQ="211005_torimochi_chr13_pPIGA3"
+for Q in ${QQ};do
+PP="D"
+for P in ${PP};do
+NN="RR000974"
+for N in  ${NN}; do
+        echo $N
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 1 -t --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${P}${N}_trim.fasta.gz  > ${P}${N}_${Q}.sam )  
+	samtools view -@ 20 -bS ${P}${N}_${Q}.sam > ${P}${N}_${Q}.bam
+bamToBed -i ${P}${N}_${Q}.bam > ${P}${N}_${Q}.bed
+rm ${P}${N}_${Q}.sam
+awk '$3-$2>22' ${P}${N}_${Q}.bed > ${P}${N}_${Q}_piRNA.bed
+coverageBed -b ${P}${N}_${Q}_piRNA.bed -a ${Q}.bed -s -d> ${P}${N}_${Q}_piRNA_plus.txt
+coverageBed -b ${P}${N}_${Q}_piRNA.bed -a ${Q}.bed -S -d> ${P}${N}_${Q}_piRNA_minus.txt
+done
+done
+done
+
+
+QQ="Bomo_genome"
+for Q in ${QQ};do
+PP="D"
+for P in ${PP};do
+NN="RR000974"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 1 -m 1 -t --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${P}${N}_trim.fasta.gz  > ${P}${N}_${Q}.sam )  
+	samtools view -@ 20 -bS ${P}${N}_${Q}.sam > ${P}${N}_${Q}.bam
+bamToBed -i ${P}${N}_${Q}.bam > ${P}${N}_${Q}.bed
+rm ${P}${N}_${Q}.sam
+rm ${P}${N}_${Q}.bam
+done
+done
+done
+
+
+
+R
+library(ggplot2)
+
+minus <- read.table("DRR000974_211005_torimochi_chr13_pPIGA3_piRNA_minus.txt")[,8]/20660143*1000000
+plus <- read.table("DRR000974_211005_torimochi_chr13_pPIGA3_piRNA_plus.txt")[,8]/20660143*1000000
+
+Y1 <- plus
+Y2 <- -minus
+len <- length(Y1)
+
+
+DATA <- data.frame(c(rep("GFP",len),rep("GFP",len)),
+      c(1:len,1:len),
+      c(Y1,Y2))
+	  
+colnames(DATA) <- c("PIWI","position","RPM")
+p0 <- ggplot(data = DATA, mapping = aes(x = position, y = RPM))
+p0 <- p0
+p0 <- p0 + geom_bar(stat = "identity", position = "dodge")
+p0 <- p0 + theme_bw(base_size = 15, base_family = "Helvetica") + ylim(c(-200, 200))
+p0 <- p0 + geom_vline(xintercept=c(5000+0.5,len-5000+0.5),colour="grey")+ geom_vline(xintercept=c(5000+0.5 + 7200,5000+0.5 + 7200+5900),colour="green")
+ggsave(file = paste0("221108_","chr13_GFP_pPIGA3","_piRNA_profile1.png"), plot = p0, dpi = 200, width = 6, height = 1.9)
