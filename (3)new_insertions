@@ -660,3 +660,68 @@ p <- p + theme_bw(base_size = 15, base_family = "Helvetica")+ylim(c(-7,7))
 
 ggsave(file = "220325_inserted_piRNA_change_2e_mod2.pdf", plot = p, width = 3, height = 3.5)
 #Fig4E
+
+
+
+###################
+#FigS5A
+##################
+svim reads --nanopore transposon2group /home/kshoji/Gawain/NGSdata/191113BmN4genome_MINION.fastq 221116_transposon1811_groups.fas            # align Nanopore reads with ngmlr, then call SVs
+cp variants.vcf 221116_transposon1811_groupsvariants.vcf
+
+
+
+R
+library(Biostrings)
+library(circlize)
+
+data <- read.table("221116_transposon1811_groupsvariants.vcf")
+fas <- readDNAStringSet("/home/kshoji/Tristan/torimochi/221116_transposon1811_groups.fas")
+snvlist <- unlist(strsplit(as.character(data[,3]),"\\."))[(1:nrow(data))*3-1]
+
+data2 <- data[snvlist=="BND",]
+
+
+a1d <- unlist(strsplit(unlist(strsplit(data2[,5],":")),"\\[|\\]"))
+a1 <- a1d[substr(a1d,1,1)== "T" | substr(a1d,1,1)== "c"| substr(a1d,1,1)== "g"]
+a2 <- a1d[is.element(substr(a1d,1,1), 0:9)]
+
+bind <- cbind(data2[data2[,1]=="cluster24" | a1 =="cluster24",1:2],a1[data2[,1]=="cluster24" | a1 =="cluster24"],a2[data2[,1]=="cluster24" | a1 =="cluster24"])
+bind[bind[,3]=="cluster24",c(1,2,3,4)] <- bind[bind[,3]=="cluster24",c(3,4,1,2)]
+colnames(bind) <- c("torimochi","Tpos","transposon","tpos")
+bind2 <- bind[order(as.numeric(bind[,2])),]
+
+
+tag <- width(fas[bind2[,3]])-as.numeric(bind2[,4]) < 100 | as.numeric(bind2[,4]) < 100
+bind2t <- unique(bind2[tag,])
+bind2n <- unique(bind2[!tag,])
+
+
+d <- data.frame(
+  chr = c("cluster24",names(table(bind2[tag,3]))),
+  x =c(width(fas["cluster24"]),width(fas[names(table(bind2[tag,3]))]))
+)
+e <- data.frame(
+  chr = c("cluster24",names(table(bind2[!tag,3]))),
+  x =c(width(fas["cluster24"]),width(fas[names(table(bind2[!tag,3]))]))
+)
+lim <- cbind(0,d[,2])
+lim[2:nrow(lim),2] <- 1000
+mim <- cbind(0,e[,2])
+
+bind2t <- unique(bind2[tag,])
+bind2n <- bind2[!tag,]
+
+bind3t <- bind2t
+bind3t[,2] <- 8905-as.numeric(bind2t[,2])+1
+
+pdf("221118_transposon_in_torimochi.pdf")
+sectors = d$chr
+circos.initialize(sectors, xlim = lim)
+circos.trackPlotRegion(sectors, ylim = c(0, 1), track.height = 0.1)
+for(i in 1:nrow(bind2t)){
+circos.link(bind3t[i,1], as.numeric(bind3t[i,2]), bind3t[i,3], 500)
+i<-4
+circos.link(bind3t[i,1], as.numeric(bind3t[i,2]), bind3t[i,3], 500,col="red")
+}
+dev.off()
