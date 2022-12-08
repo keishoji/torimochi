@@ -1,0 +1,662 @@
+
+###############
+#svim for Fig3
+##############
+svim reads --nanopore BmN4_svim /home/kshoji/Gawain/NGSdata/191113BmN4genome_MINION.fastq /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa            # align Nanopore reads with ngmlr, then call SVs
+
+cd BmN4_svim
+BmN4_svimのvariants.vcfを200825variants.vcfに名前を変更
+
+
+R
+library(Biostrings)
+data <- read.table("200825variants.vcf")
+genome <- readDNAStringSet("/home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa")
+snvlist <- unlist(strsplit(as.character(data[,3]),"\\."))[(1:nrow(data))*3-1]
+
+data2 <- data[snvlist=="BND",]
+
+sa <- data2[2:nrow(data2),2]-data2[1:(nrow(data2)-1),2]
+
+BNDlist <- cbind(as.character(data2[1:(nrow(data2)-1),5][sa < 100 & sa > 0]),as.character(data2[2:nrow(data2),5][sa < 100& sa > 0]),
+as.character(data2[1:(nrow(data2)-1),1][sa < 100& sa > 0]),
+as.character(data2[1:(nrow(data2)-1),2][sa < 100& sa > 0]),
+as.character(data2[2:nrow(data2),2][sa < 100& sa > 0]))
+
+
+a1 <- unlist(strsplit(unlist(strsplit(BNDlist[,1],":")),"Bomo_"))[(1:nrow(BNDlist))*3-1]
+a2 <- unlist(strsplit(unlist(strsplit(BNDlist[,2],":")),"Bomo_"))[(1:nrow(BNDlist))*3-1]
+
+BNDlist2 <- BNDlist[a1==a2,]
+
+BNDlist3a <- cbind(BNDlist2[substr(BNDlist2[,1],1,2) == "N[" & substr(BNDlist2[,2],1,2) =="]B",],"+")
+BNDlist3b <- cbind(BNDlist2[substr(BNDlist2[,1],1,2) == "N]" & substr(BNDlist2[,2],1,2) =="[B",c(2,1,3,4,5)],"-")
+BNDlist3c <- cbind(BNDlist2[substr(BNDlist2[,1],1,2) == "]B" & substr(BNDlist2[,2],1,2) =="N[",c(2,1,3,5,4)],"+")
+BNDlist3d <- cbind(BNDlist2[substr(BNDlist2[,1],1,2) == "[B" & substr(BNDlist2[,2],1,2) =="N]",c(1,2,3,5,4)],"-")
+BNDlist3p <- list(BNDlist3a,BNDlist3b,BNDlist3c,BNDlist3d)
+
+BNDlist4p <- list()
+for(i in 1:4){
+BNDlist4p[[i]] <- data.frame(cbind(BNDlist3p[[i]][,3:5],
+unlist(strsplit(gsub("N|\\[|\\]", "", BNDlist3p[[i]][,1]),":"))[(1:nrow(BNDlist3p[[i]]))*2-1],
+unlist(strsplit(gsub("N|\\[|\\]", "", BNDlist3p[[i]][,1]),":"))[(1:nrow(BNDlist3p[[i]]))*2],
+unlist(strsplit(gsub("N|\\[|\\]", "", BNDlist3p[[i]][,2]),":"))[(1:nrow(BNDlist3p[[i]]))*2],
+BNDlist3p[[i]][,6]))
+}
+BNDlist4 <- rbind(BNDlist4p[[1]],BNDlist4p[[2]],BNDlist4p[[3]],BNDlist4p[[4]])
+
+BNDlist5 <- BNDlist4[as.numeric(as.character(BNDlist4[,6]))-as.numeric(as.character(BNDlist4[,5])) >0,]
+
+BNDlist6 <- BNDlist5[as.numeric(as.character(BNDlist5[,6]))-as.numeric(as.character(BNDlist5[,5])) < 10^4 & as.numeric(as.character(BNDlist5[,6]))-as.numeric(as.character(BNDlist5[,5])) > 10^2,]
+colnames(BNDlist6) <- c("dest_chr","dest_start","dest_end","source_chr","source_start","source_end","source_strand")
+
+write.table(BNDlist6,"200925_newins_locilist.txt",quote=F,sep="\t",row.names=T,col.names=T)
+write.table(BNDlist5,"200925_newins_locilist_len0.txt",quote=F,sep="\t",row.names=T,col.names=T)
+
+
+R
+library(Biostrings)
+genome <- readDNAStringSet("/home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa")
+table<-read.table("200925_newins_locilist.txt")
+
+fasB <- list()
+fasA <- list()
+fas <- list()
+fasC <- list()
+fasI <- list()
+for(i in 1:nrow(table)){
+fasB[i] <- substr(genome[table[i,1]],table[i,2]-5000,table[i,2])
+fasA[i] <- substr(genome[table[i,1]],table[i,3],table[i,3]+5000)
+fasC[i] <- substr(genome[table[i,4]],table[i,5],table[i,6])
+if(table[i,7]=="-"){
+fasC[i] <- as.character(reverseComplement(DNAStringSet(substr(genome[table[i,4]],table[i,5],table[i,6]))))
+}
+if(table[i,2]-5000 < 0){
+cat("error1")
+}
+if(table[i,3]+5000 > width(genome[table[i,1]]) ){
+cat("error2")
+}
+fas[i] <- substr(genome[table[i,4]],table[i,5]-5000,table[i,6]+5000)
+cat(i)
+}
+
+AFT <- DNAStringSet(paste0(unlist(fasB),unlist(fasC),unlist(fasA)))
+BEF <- DNAStringSet(unlist(fas))
+INS <- DNAStringSet(unlist(fasC))
+names(AFT) <- paste0("AFT",1:nrow(table))
+names(BEF) <- paste0("BEF",1:nrow(table))
+names(INS) <- paste0("INS",1:nrow(table))
+writeXStringSet(BEF,"200925_newins_BEF597.fas")
+writeXStringSet(AFT,"200925_newins_AFT597.fas")
+writeXStringSet(INS,"200925_newins_INS597.fas")
+
+
+
+
+
+
+makeblastdb -in /home/kshoji/Gawain/REFdata/transposon -dbtype nucl -hash_index
+makeblastdb -in /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa -dbtype nucl -hash_index
+makeblastdb -in 200925_newins_INS597.fas -dbtype nucl -hash_index
+blastn -num_threads 8 -query 200925_newins_INS597.fas -db /home/kshoji/Gawain/REFdata/transposon -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 200925_newins_INS597_transposon_blastn.out
+blastn -num_threads 8 -query 200925_newins_INS597.fas -db 200925_newins_INS597.fas -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 200925_newins_INS597_INS597_blastn.out
+blastn -num_threads 8 -query 200925_newins_INS597.fas -db /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 200925_newins_INS597_BomoGenome_blastn.out
+
+
+R
+library(Biostrings)
+table<-read.table("200925_newins_locilist.txt")
+INSname <- paste0("INS",1:597)
+INS <- readDNAStringSet("200925_newins_INS597.fas")
+genome <- readDNAStringSet("/home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa")
+iin <- read.table("200925_newins_INS597_INS597_blastn.out")
+itn <- read.table("200925_newins_INS597_transposon_blastn.out")
+ign <- read.table("200925_newins_INS597_BomoGenome_blastn.out")
+
+threshold <- 1e-100
+iin2 <- iin[iin[,10]<threshold,]
+VEC <- matrix(0,nrow(table),2)
+VEC[,2] <- width(INS)
+rownames(VEC) <- INSname
+j <- 1
+for(i in 1:nrow(VEC)){
+if(VEC[i]==0){
+clus <- paste0("cluster_tmp",sprintf("%03d",j))
+VEC[as.character(iin2[iin2[,1]==INSname[i],2]),1] <- clus
+if(sum(iin2[,1]==INSname[i])<1){
+VEC[i] <- clus
+}
+j<- j+1
+}else{
+VEC[as.character(iin2[iin2[,1]==INSname[i],2]),1]  <- VEC[i]
+}
+cat(i)
+}
+
+Cnames <- names(sort(table(VEC[,1]),decreasing=T))
+Nnames <- paste0("group_",sprintf("%03d",1:length(Cnames)))
+for(i in 1:length(Cnames)){
+VEC[VEC[,1]==Cnames[i],1] <- Nnames[i]
+}
+
+ign2 <- ign[ign[,10]<threshold,]
+
+ign2[is.element(ign2[,1],rownames(VEC)[VEC[,1]=="cluster68"]),1:10]
+
+
+OUT1 <- data.frame(cbind(table(factor(ign2[,1],levels=INSname)),
+tapply(ign2[,3],factor(ign2[,1],levels=INSname),sum),
+VEC))
+colnames(OUT1) <- c("Similar_sites","Similar_area","cluster","length")
+
+write.table(OUT1,"220215_ins_cluster_size.txt",sep="\t",quote=F)
+
+OUT2 <- sort(table(VEC[,1]),decreasing=T)
+write.table(OUT2,"220215_ins_cluster_num.txt",sep="\t",quote=F)
+
+OUT3 <- sort(tapply(as.numeric(as.character(OUT1[,2])),OUT1[,3],mean))
+write.table(OUT3,"220215_ins_cluster_meanlength.txt",sep="\t",quote=F)
+
+vlist <- cbind(unique(VEC[,1]),0,0)
+for(i in 1:nrow(vlist)){
+	tins <- rownames(VEC)[is.element(VEC[,1],vlist[i,1])]
+	
+	if(sum(is.element(as.character(ign2[,1]),tins)) > 0 ){
+	ign3 <- data.frame(ign2[is.element(as.character(ign2[,1]),tins),c(2,8,9)])
+	ign3[,1] <- as.character(ign3[,1])
+	ign3[ign3[,3]-ign3[,2] < 0,c(2,3)] <- ign3[ign3[,3]-ign3[,2] < 0,c(3,2)] 
+	
+	ign4 <- ign3[order(ign3[,1],ign3[,2],ign3[,3]),]
+	ign5 <- ign4
+	ign5a <- ign5[1:(nrow(ign5)-1),]
+	ign5b <- ign5[2:(nrow(ign5)),]
+	tag1 <- ign5a[,1]==ign5b[,1]
+	tag2 <- ign5a[,3]-ign5b[,2] > -1
+	
+	if( nrow(ign5) > 1){
+	sts <- (1:nrow(ign5))[c(T,!(tag1 & tag2))]
+	each <- c(sts[2:length(sts)],nrow(ign5)+1) - sts
+	num <- rep(0,nrow(ign5))
+	k<-1
+	for(j in 1:length(each)){
+	num[k:(k+each[j]-1)] <- j
+	k <- k+each[j]
+	}
+	TMP <- data.frame(tapply(ign5[,1],num,unique),
+	tapply(ign5[,2],num,min),
+	tapply(ign5[,3],num,max))
+	if(nrow(TMP) > 1){
+		REC <- TMP[1,]
+		wda <- 1
+		for(j in 2:nrow(TMP)){
+			if(REC[1] == TMP[j,1] & REC[3] > TMP[j,2]){	
+			TMP[wda:j,2:3] <- c(REC[2],max(c(TMP[j,3],REC[[3]])))
+			REC[2:3] <- c(REC[2],max(c(TMP[j,3],REC[[3]])))
+			}else{
+				wda <- j
+				REC <- TMP[j,]
+			}
+		}
+	}
+	TMP2 <- unique(TMP)
+	cat("a")
+	cat(i)
+	vlist[i,2] <- sum(TMP2[,3] - TMP2[,2])
+	vlist[i,3] <- nrow(TMP2)
+	}else{
+	vlist[i,2] <- sum(ign5[,3] - ign5[,2])
+	vlist[i,3] <- 1
+	}
+	}
+}
+
+
+trap <- rep("N",length(INS))
+names(trap) <- names(INS)
+
+for(i in 1:length(INS)){
+tag <- is.element(itn[,1],names(trap)[i])
+if(sum(tag)>0){
+trap[i] <- as.character(itn[tag,][1,2])
+}
+}
+
+trap2 <- rep("N",length(unique(OUT1[,3]))) 
+names(trap2) <- unique(OUT1[,3])
+fac3 <- factor(OUT1[,3],levels=unique(OUT1[,3]))
+for(i in 1:length(trap2)){
+trap2[i] <- names(sort(table(trap[is.element(fac3,names(trap2)[i])]),decreasing=T))[1]
+}
+
+colnames(vlist) <- c("cluster","area","sites")
+write.table(trap2,"220215_ins_cluster_annotation.txt",sep="\t",quote=F)
+
+OUT4 <- data.frame(as.numeric(vlist[,2]),
+as.numeric(vlist[,3]),
+tapply(as.numeric(as.character(OUT1[,4])),factor(OUT1[,3],levels=unique(OUT1[,3])),sum),
+table(factor(OUT1[,3],levels=unique(OUT1[,3]))),
+tapply(as.numeric(as.character(OUT1[,4])),factor(OUT1[,3],levels=unique(OUT1[,3])),mean),
+trap2
+)
+OUT4 <- OUT4[,-4]
+colnames(OUT4) <- c("old_area","old_sites","new_area","new_sites","new_average_length","annotation")
+OUT5 <- OUT4[order(rownames(OUT4)),]
+
+write.table(OUT4,"220215_ins_cluster_OUT4.txt",sep="\t",quote=F)
+write.table(OUT5,"220215_ins_cluster_OUT5.txt",sep="\t",quote=F)
+
+
+#Fig3A
+R
+setwd("~/Desktop/datas/info/torimochi")
+library(ggplot2)
+library(ggthemes)
+library(Biostrings)
+library(ggsci)
+
+llist <- read.table("200925_newins_locilist.txt")
+llist0 <- read.table("200925_newins_locilist_len0.txt")
+
+
+data1 <- data.frame(1:nrow(llist0),log10(llist0[,6]-llist0[,5]))
+colnames(data1) <- c("nname","cnum")
+
+p <- ggplot(data1, aes(x=nname, y=cnum))
+p <- p + geom_point()
+p <- p + ylab(expression({log[10]("Insert length")}))+ xlab("insert ID")
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p <- p + geom_hline(yintercept=c(2,4),linetype="dashed",colour="blue") 
+p
+ggsave(file = "220513_insert0_length.pdf", plot = p, width = 5, height = 3.5)
+#Fig3A
+
+R
+setwd("~/Desktop/datas/info/torimochi")
+library(ggplot2)
+library(ggthemes)
+library(Biostrings)
+library(ggsci)
+
+OUT1 <- read.table("220215_ins_cluster_size.txt")
+OUT4 <- read.table("220215_ins_cluster_OUT5.txt")
+
+data1 <- data.frame(OUT4,table(factor(OUT1[,3],levels=rownames(OUT4))))
+data1[,7] <- sub("group_","",data1[,7])
+data1[,7] <- factor(as.numeric(data1[,7]),levels=sort(unique(as.numeric(data1[,"Var1"]))))
+
+
+data2 <- data1[data1[,8] > 4,]
+
+data3 <- data.frame(data2[,1],data2[,7])
+colnames(data3) <- c("ratio","Var1")
+data3[,2] <- factor(data3[,2],levels=data2[,7][order(data2[,8],decreasing=T)])
+
+p <- ggplot(data2, aes(x=Var1, y=Freq))
+p <- p + geom_bar(stat="identity")+ylim(0,80)
+p <- p + ylab(expression(paste("new inserted sites")))+ xlab("insert group ID")
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p
+ggsave(file = "220216_inserted_sites2.pdf", plot = p, width = 5, height = 3.5)
+#Fig3C
+
+###################
+#Fig3D S4
+##################
+R
+library(Biostrings)
+library(ggplot2)
+
+loci <- read.table("200925_newins_locilist.txt")
+ann <- read.table("./BmN4_svim/220215_ins_cluster_size.txt")
+genome <- readDNAStringSet("/home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa") 
+
+names <- c("group_002","group_003","group_008","group_017","group_004","group_019","group_020","group_016","group_014","group_018","group_005","group_006","group_010","group_015","group_012","group_013","group_001","group_009","group_007","group_011")
+
+anno <- rbind(
+c("Bomo_Chr12","16568093","16577026","+","Bomo_Chr24","6008535","6016856","+","group_002"),
+c("Bomo_Chr12","16568093","16577026","+","Bomo_Chr11","6327417","6318514","-","group_002"),
+c("Bomo_Chr4","17032350","17034048","+","Bomo_Chr6","15689065","15690763","+","group_008"),
+c("Bomo_Chr17","7623494","7624117","+","Bomo_Chr26","801301","801924","+","group_017"),
+c("Bomo_Chr15","11567167","11570437","+","Bomo_Chr27","6713762","6717059","+","group_019"),
+c("Bomo_Chr12","2214367","2215777","+","Bomo_Chr2","170371","169025","-","group_014"), 
+c("Bomo_Chr12","2214367","2215777","+","Bomo_Chr28","1862988","1861604","-","group_014"),
+c("Bomo_Chr24","30302","30682","+","Bomo_Chr14","10668","11048","+","group_005"),
+c("Bomo_Chr7","365598","367924","+","Bomo_Chr4","6018928","6021966","+","group_006"),
+c("Bomo_Chr7","365598","367924","+","Bomo_Chr23","1508411","1511395","+","group_006"),
+c("Bomo_Chr15","6364334","6365015","+","Bomo_Chr26","6540444","6539803","-","group_010"),
+c("Bomo_Chr15","6364335","6365013","+","Bomo_Chr23","14372458","14373130","+","group_010"),
+c("Bomo_Chr15","6364335","6364878","+","Bomo_Chr21","5068482","5067958","-","group_010"),
+c("Bomo_Chr15","6364336","6365015","+","Bomo_Chr12","4752686","4753349","+","group_010"),
+c("Bomo_Chr15","6364337","6365015","+","Bomo_Chr26","9448720","9448084","-","group_010"),
+c("Bomo_Chr15","6364335","6365013","+","Bomo_Chr16","14269190","14269860","+","group_010"),
+c("Bomo_Chr15","6364334","6365013","+","Bomo_Chr23","18597440","18598111","+","group_010")
+
+)
+
+
+for(i in 1:16){
+anno2 <- anno[is.element(anno[,9],names[i]),]
+tmp <- cbind(loci[ann[,3]==names[i],4:6],ann[ann[,3]==names[i],3:4])
+tmp2 <- tmp
+atg <- sum(is.element(anno[,9],names[i]))
+
+if(atg>1){
+for(j in 1:atg){
+tag <- tmp[,1]==anno2[j,5] & substr(tmp[,2],1,2) == substr(anno2[j,6],1,2)
+if(anno2[j,4] == anno2[j,8]){
+tmp2[tag,2] <- tmp[tag,2] - as.numeric(anno2[j,6]) + as.numeric(anno2[j,2])
+tmp2[tag,3] <- tmp[tag,3] - as.numeric(anno2[j,7]) + as.numeric(anno2[j,3])
+}else{
+tmp2[tag,2] <-  as.numeric(anno2[j,6]) - tmp[tag,3] +  as.numeric(anno2[j,2])
+tmp2[tag,3] <-  as.numeric(anno2[j,7]) - tmp[tag,2] +  as.numeric(anno2[j,3])
+}
+}
+}
+if(atg==1){
+if(anno2[4] == anno2[8]){
+tmp2[tmp[,1]==anno2[5],2] <- tmp[tmp[,1]==anno2[5],2] - as.numeric(anno2[6]) + as.numeric(anno2[2])
+tmp2[tmp[,1]==anno2[5],3] <- tmp[tmp[,1]==anno2[5],3] - as.numeric(anno2[7]) + as.numeric(anno2[3])
+}else{
+tmp2[tmp[,1]==anno2[5],2] <-  as.numeric(anno2[6]) - tmp[tmp[,1]==anno2[5],3] +  as.numeric(anno2[2])
+tmp2[tmp[,1]==anno2[5],3] <-  as.numeric(anno2[7]) - tmp[tmp[,1]==anno2[5],2] +  as.numeric(anno2[3])
+}
+}
+
+
+tmp2[,5] <- tmp2[,3] - tmp2[,2]
+tmp3 <- tmp2[order(tmp2[,5],decreasing=T),]
+
+df <- data.frame(x1=tmp3[,2]-tmp3[1,2]+1,x2=tmp3[,3]-tmp3[1,2]+1,y=nrow(tmp3):1)
+xmax <- max(ceiling(df[,2]/1000)*1000)
+
+segsize <- 2*(15)/(nrow(df))
+g <- ggplot(df, aes(x = x1, y = y, xend = x2, yend = y)) +
+  geom_segment(size = segsize)+ theme(
+    panel.background = element_rect(fill = "transparent",color = NA),
+    panel.grid.minor = element_line(color = NA), 
+    panel.grid.major = element_line(color = NA),
+    plot.background = element_rect(fill = "transparent",color = NA)  #ここを追加
+)+ geom_vline(xintercept=c(df[1,1],df[1,2]),col="grey",linetype="dashed", size = 0.3)+ coord_cartesian(xlim = c(1, 9000)) +
+scale_x_continuous(breaks=seq(0,xmax,1000))+xlab("length")+ylab(paste(nrow(df),"inserts"))+ theme(axis.ticks = element_blank(),axis.text.y = element_blank())
+ggsave(file = paste0("220601_",names[i],"area.png"), plot =g , dpi = 1000, width = 5, height = 1.5)
+}
+
+
+###################
+#Fig4
+##################
+
+
+bowtie-build 200925_newins_INS597.fas new_INS597
+
+#V2
+QQ="new_INS597"
+for Q in ${QQ};do
+NN="181220_P1_Naïve_Total_NaIO4m 170124_OV1_MLVminus"
+for N in  ${NN}; do
+        echo $N
+
+	( bowtie --offrate 3 -p 20 -a --best --strata -v 2 -t --sam ${Q} -f /home/kshoji/Gawain/NGSdata/${N}_trim.fasta.gz  > ${N}_${Q}.sam )  
+	samtools view -@ 20 -bS ${N}_${Q}.sam > ${N}_${Q}.bam
+bamToBed -i ${N}_${Q}.bam > ${N}_${Q}.bed
+rm ${N}_${Q}.sam
+rm ${N}_${Q}.bam
+	awk '$3-$2>22' ${N}_${Q}.bed > ${N}_${Q}_piRNA.bed
+coverageBed -b ${N}_${Q}_piRNA.bed -a 200925_${Q}.bed > ${N}_${Q}_reads.txt
+done
+done
+
+
+QQ="new_INS597"
+for Q in ${QQ};do
+NN="171128_1_pIZ DRR186503_NIAS_OV"
+for N in  ${NN}; do
+        echo $N
+hisat2 -x ${Q} -1 /home/kshoji/Gawain/NGSdata/${N}_R1.fastq.gz  -2 /home/kshoji/Gawain/NGSdata/${N}_R2.fastq.gz -k 3 -p 20 -S ${N}_${Q}_HS2.sam
+samtools view -@ 20 -bS ${N}_${Q}_HS2.sam > ${N}_${Q}_HS2.bam
+bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
+ rm ${N}_${Q}_HS2.sam
+coverageBed -b ${N}_${Q}_HS2.bed -a 200925_${Q}.bed > ${N}_${Q}_reads.txt
+done
+done
+done
+
+
+
+R
+library(Biostrings)
+fas<-readDNAStringSet("200925_newins_INS597.fas")
+
+totalR <- c(43120264,33809102)
+totalP <- c(43864953,134261868)
+
+
+piRNAs <- cbind(BmQ=read.table("181220_P1_Naïve_Total_NaIO4m_new_INS597_reads.txt")[,7],
+OV=read.table("170124_OV1_MLVminus_new_INS597_reads.txt")[,7])
+
+RNAs <- cbind(BmQ=read.table("171128_1_pIZ_new_INS597_reads.txt")[,7],
+OV=read.table("DRR186503_NIAS_OV_new_INS597_reads.txt")[,7])
+
+RNAs2 <- sweep(RNAs,2,totalR,"/")*1000000
+piRNAs2 <- sweep(piRNAs,2,totalP,"/")*1000000
+
+
+e <- sweep(piRNAs2,1,width(fas),"/")*1000
+f <- sweep(RNAs2,1,width(fas),"/")*1000
+
+colnames(e) <-  c("BmN4","OV")
+colnames(f) <-  c("BmN4","OV")
+write.table(e,"220222_transpose_piRNA_INS597.txt",quote=F,sep="\t")
+write.table(f,"220222_transpose_RNA_INS597.txt",quote=F,sep="\t")
+
+R
+setwd("~/Desktop/datas/info/torimochi")
+library(ggplot2)
+library(ggthemes)
+library(Biostrings)
+library(ggsci)
+
+OUT1 <- read.table("220215_ins_cluster_size.txt")
+OUT4 <- read.table("220215_ins_cluster_OUT5.txt")
+
+RNAs <- read.table("220222_transpose_RNA_INS597.txt")
+piRNAs <- read.table("220222_transpose_piRNA_INS597.txt")
+
+data1 <- data.frame(OUT4,table(factor(OUT1[,3],levels=rownames(OUT4))))
+data1[,7] <- sub("group_","",data1[,7])
+data1[,7] <- factor(as.numeric(data1[,7]),levels=sort(unique(as.numeric(data1[,"Var1"]))))
+
+
+data2 <- data1[data1[,8] > 4,]
+
+data5a <- data.frame(log2(data2[,3]/data2[,1]),
+                     data2[,7])
+colnames(data5a) <- c("ratio","group")
+data5a[,2] <-factor(data5a[,2],levels=data2[,7][order(data2[,3]/data2[,1],decreasing=T)])
+
+q <-ggplot(data5a, aes(x=group, y=ratio))
+q <- q +  geom_point(pch = 21)
+q <- q + ylab(expression({log[2]("new area/old area")}))+ xlab("insert group ID")
+q <- q + theme_bw(base_size = 15, base_family = "Helvetica")
+q
+ggsave(file = "220216_inserted_piRNA_areahi.pdf", plot = q, width =5.36, height = 3.5)
+#Fig4A
+
+
+
+data4 <- data.frame( c(log2(piRNAs[,1]+0.1),log2(piRNAs[,2]+0.1)),
+                     as.numeric(c(sub("group_","",OUT1[,3]),sub("group_","",OUT1[,3]))),
+                     c(rep("BmN4",nrow(OUT1)),rep("Ovary",nrow(OUT1))))
+
+
+colnames(data4) <- c("RPKM","group","sample")
+data5 <- data4[is.element(data4[,2],data3[,2]),]
+data5[,2] <-factor(data5[,2],levels=data2[,7][order(data2[,3]/data2[,1],decreasing=T)])
+data5[,3] <- factor(data5[,3] ,levels=c("Ovary","BmN4"))
+
+p <- ggplot(data5, aes(x=group, y=RPKM,colour=sample))
+p <- p + geom_boxplot()+ geom_point(pch = 21, position = position_jitterdodge())
+p <- p + ylab(expression(paste("piRNA level (",{log[2](RPKM)})))+ xlab("insert group ID")
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p
+
+ggsave(file = "220222_inserted_piRNA_change2.pdf", plot = p, width = 6.6, height = 3.5)
+#Fig4B
+
+gps <- c(2,3,8,17,4,19,20,16,14,18,5,6,10,15,12,13,1,9,7,11)
+pval1 <- rep(0,length(gps))
+names(pval1) <- gps
+
+#for(i in 1:length(gps)){
+pval1[i] <- t.test(data4[data4[,2]==gps[i] & data4[,3]=="BmN4",1],
+       data4[data4[,2]==gps[i] & data4[,3]=="Ovary",1],
+       paired=T)$p.value
+}
+for(i in 1:length(gps)){
+  pval1[i] <- wilcox.test(data4[data4[,2]==gps[i] & data4[,3]=="BmN4",1],
+                     data4[data4[,2]==gps[i] & data4[,3]=="Ovary",1],
+                     paired=TRUE, correct=FALSE)$p.value
+}
+p.adjust(pval1,method="BH")
+plot(log10(p.adjust(pval1,method="BH")))
+abline(h=log10(0.01))
+
+data4 <- data.frame( c(log2(RNAs[,1]+0.1),log2(RNAs[,2]+0.1)),
+                     as.numeric(c(sub("group_","",OUT1[,3]),sub("group_","",OUT1[,3]))),
+                     c(rep("BmN4",nrow(OUT1)),rep("Ovary",nrow(OUT1))))
+
+
+colnames(data4) <- c("RPKM","group","sample")
+data5 <- data4[is.element(data4[,2],data3[,2]),]
+data5[,2] <-factor(data5[,2],levels=data2[,7][order(data2[,3]/data2[,1],decreasing=T)])
+data5[,3] <- factor(data5[,3] ,levels=c("Ovary","BmN4"))
+
+p <- ggplot(data5, aes(x=group, y=RPKM,colour=sample))
+p <- p + geom_boxplot()+ geom_point(pch = 21, position = position_jitterdodge())
+p <- p + ylab(expression(paste("mRNA level (",{log[2](RPKM)})))+ xlab("insert group ID")
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p
+
+ggsave(file = "220222_inserted_RNA_change2.pdf", plot = p, width = 6.6, height = 3.5)
+
+
+#Fig4C
+
+
+QQ="new_INS597"
+for Q in ${QQ};do
+NN="IgG-R H3K9me3 H3K27ac"
+for N in  ${NN}; do
+        echo $N
+hisat2 -x ${Q} -U /home/kshoji/Gawain/NGSdata/${N}_pf.fq.gz -k 3 -p 20 -S ${N}_${Q}_HS2.sam
+samtools view -@ 20 -bS ${N}_${Q}_HS2.sam > ${N}_${Q}_HS2.bam
+bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
+ rm ${N}_${Q}_HS2.sam
+coverageBed -b ${N}_${Q}_HS2.bed -a 200925_${Q}.bed  -split> ${N}_${Q}.txt
+done
+done
+done
+QQ="Bomo_genome"
+for Q in ${QQ};do
+NN="IgG-R H3K9me3 H3K27ac"
+for N in  ${NN}; do
+        echo $N
+hisat2 -x ${Q} -U /home/kshoji/Gawain/NGSdata/${N}_pf.fq.gz -k 3 -p 20 -S ${N}_${Q}_HS2.sam
+samtools view -@ 20 -bS ${N}_${Q}_HS2.sam > ${N}_${Q}_HS2.bam
+bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
+ rm ${N}_${Q}_HS2.sam
+done
+done
+done
+QQ="transposon"
+for Q in ${QQ};do
+NN="IgG-R H3K9me3 H3K27ac"
+for N in  ${NN}; do
+        echo $N
+hisat2 -x ${Q} -U /home/kshoji/Gawain/NGSdata/${N}_pf.fq.gz -k 3 -p 20 -S ${N}_${Q}_HS2.sam
+samtools view -@ 20 -bS ${N}_${Q}_HS2.sam > ${N}_${Q}_HS2.bam
+bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
+ rm ${N}_${Q}_HS2.sam
+coverageBed -b ${N}_${Q}_HS2.bed -a ${Q}.bed  -split> ${N}_${Q}.txt
+done
+done
+done
+
+QQ="Bomo_genome"
+for Q in ${QQ};do
+NN="IgG-R H3K9me3 H3K27ac"
+for N in  ${NN}; do
+        echo $N
+cat ${N}_${Q}_HS2.bed | awk -F"\t" '{print $4}' |sort| uniq| wc -l
+done
+done
+#mapped reads
+
+
+R
+library(ggplot2)
+gps <- c(2,3,8,17,4,19,20,16,14,18,5,6,10,15,12,13,1,9,7,11)
+OUT1 <- read.table("220215_ins_cluster_size.txt")
+OUT4 <- read.table("220215_ins_cluster_OUT5.txt")
+
+data1 <- data.frame(OUT4,table(factor(OUT1[,3],levels=rownames(OUT4))))
+
+normF <- c(14560454,13994419,21501088)
+
+
+names <- c("IgG-R","H3K9me3","H3K27ac")
+reads <- rep(0,597*length(names))
+Ns <- rep("N",597*length(names))
+clus <- rep("N",597*length(names))
+for(i in 2:3){
+  reads[((i-1)*597+1):(i*597)] <- (read.table(paste0(names[i],"_new_INS597.txt"))[,7]+1)/normF[i]/(read.table(paste0(names[1],"_new_INS597.txt"))[,7]+1)*normF[1]
+  Ns[((i-1)*597+1):(i*597)] <- names[i]
+  clus[((i-1)*597+1):(i*597)] <- as.numeric(sub("group_","",OUT1[,3]))
+}
+
+data2 <- data1[data1[,8] > 4,]
+data2[,6] <- factor(data2[,6],levels=data2[,7][order(data2[,7],decreasing=T)])
+
+CHIP <- data.frame(log2(reads),Ns,clus)
+names2e <- c("H3K27ac","H3K9me3")
+
+colnames(CHIP) <- c("reads","Ns","clus")
+CHIP2 <- CHIP[is.element(CHIP[,3],gps),]
+CHIP2[,3] <-factor(CHIP2[,3],levels=gps)
+CHIP3e <- CHIP2[is.element(CHIP2[,2],names2e),]
+
+
+CHIP3ek0 <- rbind(cbind(as.matrix(CHIP3e),rep("ins",nrow(CHIP3e))),Tr27,Tr9)
+CHIP3ek <- data.frame(as.numeric(CHIP3ek0[,1]),factor(CHIP3ek0[,2]),factor(CHIP3ek0[,3],levels=c(as.character(data2[,6][order(data2[,3]/data2[,1],decreasing=T)]),"tr")),factor(CHIP3ek0[,4]))
+colnames(CHIP3e) <- c("reads","antibodies","clus")
+#CHIP3ek2 <- CHIP3ek[!is.infinite(CHIP3ek[,1])&!is.nan(CHIP3ek[,1])&!is.na(CHIP3ek[,1]),] 
+CHIP3e2 <- CHIP3e[!is.infinite(CHIP3e[,1])&!is.nan(CHIP3e[,1])&!is.na(CHIP3e[,1]),] 
+
+p <- ggplot(CHIP3e2, aes(x=clus, y=reads,colour=antibodies))
+p <- p + geom_boxplot() + geom_point(pch = 21, position = position_jitterdodge())
+p <- p + ylab(expression({log[2](enrichment)}))+ xlab("insert group ID")+ scale_color_manual(values = c("#ff9900", "#339900"))
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")+ylim(c(-4,4))
+p
+ggsave(file = "220216_inserted_piRNA_change_2e_mod1.pdf", plot = p, width = 7, height = 3.5)
+#Fig4D
+
+
+K9m3 <- read.table("H3K9me3_transposon.txt")
+K27ac <- read.table("H3K27ac_transposon.txt")
+IgG <- read.table("IgG-R_transposon.txt")
+
+Tr27 <- cbind(log2((K27ac[,7]+1)/normF[3])-log2((IgG[,7]+1)/normF[1]),"H3K27ac","tr","tr")
+Tr9 <- cbind(log2((K9m3[,7]+1)/normF[3])-log2((IgG[,7]+1)/normF[1]),"H3K9me3","tr","tr")
+TRek0 <- rbind(Tr27,Tr9)
+TRek <- data.frame(as.numeric(TRek0[,1]),factor(TRek0[,2]),factor(TRek0[,3]))
+TRek2 <- TRek
+TRek2[,3] <- "transposons"
+colnames(TRek2) <- c("reads","antibodies","clus")
+p <- ggplot(TRek2, aes(x=clus, y=reads,colour=antibodies))
+p <- p + geom_boxplot()# + geom_point(pch = 21, position = position_jitterdodge())
+p <- p + ylab(expression({log[2](enrichment)}))+ xlab("")+ scale_color_manual(values = c("#ff9900", "#339900"))
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")+ylim(c(-7,7))
+
+ggsave(file = "220325_inserted_piRNA_change_2e_mod2.pdf", plot = p, width = 3, height = 3.5)
+#Fig4E
