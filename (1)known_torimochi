@@ -78,8 +78,6 @@ R
 total <- c(43864953,134261868) #total genome mapped reads
 library(ggplot2)
 library(ggthemes)
-
-library(tidyverse)
 total_p <- read.table("181220_P1_Naïve_Total_NaIO4m_toricore_pm10kb_plus.txt")
 total_m <- read.table("181220_P1_Naïve_Total_NaIO4m_toricore_pm10kb_minus.txt")
 OV_p <- read.table("170124_OV1_MLVminus_toricore_pm10kb_plus.txt")
