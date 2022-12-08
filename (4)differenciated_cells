@@ -1,0 +1,177 @@
+
+###################
+#Fig5
+##################
+
+hisat2-build /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa Bomo_genome
+hisat2-build /home/kshoji/Gawain/REFdata/KWMTBOMO.nucl.fa KWMTBOMO
+hisat2-build /home/kshoji/Gawain/REFdata/transposons.fasta transposons
+hisat2-build /home/kshoji/Gawain/REFdata/200925_newins_INS597.fas new_INS597
+
+QQ="Bomo_genome"
+for Q in ${QQ};do
+NN="lip0_RNA lip10_RNA lip20_RNA"
+for N in  ${NN}; do
+        echo $N
+hisat2 -x ${Q} -1 /home/kshoji/Gawain/NGSdata/${N}_R1.fastq.gz  -2 /home/kshoji/Gawain/NGSdata/${N}_R2.fastq.gz -k 3 -p 20 -S ${N}_${Q}_HS2.sam
+samtools view -@ 20 -bS ${N}_${Q}_HS2.sam > ${N}_${Q}_HS2.bam
+bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
+ rm ${N}_${Q}_HS2.sam
+done
+done
+
+#total genome mapped reads
+QQ="Bomo_genome"
+for Q in ${QQ};do
+NN="lip0_RNA lip10_RNA lip20_RNA"
+for N in  ${NN}; do
+        echo $N
+cat ${N}_${Q}_HS2.bed | awk -F"\t" '{print $4}' |sort| uniq| wc -l
+done
+done
+
+
+
+
+QQ="KWMTBOMO transposon new_INS597"
+for Q in ${QQ};do
+NN="lip0_RNA lip10_RNA lip20_RNA"
+for N in  ${NN}; do
+        echo $N
+hisat2 -x ${Q} -1 /home/kshoji/Gawain/NGSdata/${N}_R1.fastq.gz  -2 /home/kshoji/Gawain/NGSdata/${N}_R2.fastq.gz -k 3 -p 20 -S ${N}_${Q}_HS2.sam
+samtools view -@ 20 -bS ${N}_${Q}_HS2.sam > ${N}_${Q}_HS2.bam
+bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
+ rm ${N}_${Q}_HS2.sam
+coverageBed -b ${N}_${Q}_HS2.bed -a /home/kshoji/Gawain/REFdata/${Q}.bed > ${N}_${Q}_reads.txt
+
+done
+done
+
+
+R
+refs <- c("KWMTBOMO","transposon","new_INS597")
+total<-c(51892468,53316972,73027248)
+
+for(i in 1:3){
+lip0 <- read.table(paste0("lip0_RNA_",refs[i],"_reads.txt"))
+lip10 <- read.table(paste0("lip10_RNA_",refs[i],"_reads.txt"))
+lip20 <- read.table(paste0("lip20_RNA_",refs[i],"_reads.txt"))
+
+reads <- cbind(lip0[,7],lip10[,7],lip20[,7]) 
+rownames(reads) <- lip0[,1]
+colnames(reads) <- c("lip0","lip10","lip20")
+
+RPKM <- sweep(sweep(reads,2,total,"/")*1000000,1,lip0[,3],"/")*1000
+write.table(RPKM,paste0("220825_lips_RNA_",refs[i],"_RPKM.txt",sep="\t",quote=F)
+}
+
+
+#########R
+setwd("~/Desktop/datas/info/torimochi")
+library(ggplot2)
+library(ggthemes)
+library(Biostrings)
+library(ggsci)
+library(RColorBrewer)
+
+OUT1 <- read.table("220215_ins_cluster_size.txt")
+OUT4 <- read.table("220215_ins_cluster_OUT5.txt")
+
+
+data1 <- data.frame(OUT4,table(factor(OUT1[,3],levels=rownames(OUT4))))
+data1[,7] <- sub("group_","",data1[,7])
+data1[,7] <- factor(as.numeric(data1[,7]),levels=sort(unique(as.numeric(data1[,"Var1"]))))
+
+data2 <- data1[data1[,8] > 4,]
+
+data3 <- data.frame(data2[,1],data2[,7])
+colnames(data3) <- c("ratio","Var1")
+data3[,2] <- factor(data3[,2],levels=data2[,7][order(data2[,8],decreasing=T)])
+
+INS <- read.table("220825_lips_RNA_new_INS597_RPKM.txt")
+transposon <- read.table("220825_lips_RNA_transposon_RPKM.txt")
+gene <- read.table("220825_lips_RNA_KWMTBOMO_RPKM.txt")
+
+
+pigene<-c("KWMTBOMO07274","KWMTBOMO01223","KWMTBOMO01224","KWMTBOMO01225","KWMTBOMO08717","KWMTBOMO02877","KWMTBOMO00891","KWMTBOMO06157","KWMTBOMO06144","KWMTBOMO07858","KWMTBOMO15589","KWMTBOMO01139","KWMTBOMO02014","KWMTBOMO08756","KWMTBOMO08865","KWMTBOMO11560","KWMTBOMO10180","KWMTBOMO15204","KWMTBOMO03397","KWMTBOMO02727","KWMTBOMO06482","KWMTBOMO06483","KWMTBOMO10777")
+#piRNA pathway related genes
+
+
+x <- data.frame(
+  days  = c(0,10,20),
+  RPKM = log2(as.vector(as.matrix(gene["KWMTBOMO09788",]/gene["KWMTBOMO09788",1])))
+)
+
+p <- ggplot(x, aes(x = days, y = RPKM))
+p <- p + geom_line() + ylim(c(-2,2)) +geom_point()
+p <- p+ ylab(expression({log[2]("Fold change")}))
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p <- p +scale_x_continuous(breaks=c(0,10,20))
+p
+ggsave(file = "220825_BmFABP1_change.pdf", plot = p, width = 6, height = 3)
+#Fig5A
+
+
+
+
+tmp1 <- gene[pigene,]
+pigene2<-c("KWMTBOMO07274","KWMTBOMO08717","KWMTBOMO02877","KWMTBOMO00891","KWMTBOMO06157","KWMTBOMO06144","KWMTBOMO07858","KWMTBOMO15589","KWMTBOMO01139","KWMTBOMO02014","KWMTBOMO08756","KWMTBOMO08865","KWMTBOMO11560","KWMTBOMO10180","KWMTBOMO15204","KWMTBOMO03397","KWMTBOMO02727","KWMTBOMO10777")
+
+ago3 <- apply(sweep(tmp1[2:4,],1,c(678,1200,330),"*"),2,sum)/(678+1200+330)
+Tudor <- apply(sweep(tmp1[c("KWMTBOMO06482","KWMTBOMO06483"),],1,c(4788,2178),"*"),2,sum)/(4788+2178)
+tmp2 <- rbind(tmp1[pigene2,],Ago3=ago3,Tudor=Tudor)
+
+datax <- data.frame( c(log2(tmp2[,1]/tmp2[,1]),log2(tmp2[,2]/tmp2[,1]),log2(tmp2[,3]/tmp2[,1])),
+                     c(rep(rownames(tmp2),3)),
+                     c(rep(0,nrow(tmp2)),rep(10,nrow(tmp2)),rep(20,nrow(tmp2))))
+colnames(datax) <- c("RPKM","group","days")
+
+
+p <- ggplot(datax, aes(x=days, y=RPKM,colour=group))
+p <- p + geom_line() + ylim(c(-1,1)) +geom_point()
+p <- p+ ylab(expression({log[2]("Fold change")}))
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p <- p+ scale_x_continuous(breaks=c(0,10,20))
+p <- p + theme(legend.position = 'none')
+ggsave(file = "220825_pigene_change_line.pdf", plot = p, width = 7, height = 5)
+#Fig5B
+
+
+gg <- names(tapply(INS[,1],OUT1[,3],mean))
+datax <- data.frame( c(log2(tapply(INS[,1],OUT1[,3],mean)/tapply(INS[,1],OUT1[,3],mean))[1:20],log2(tapply(INS[,2],OUT1[,3],mean)/tapply(INS[,1],OUT1[,3],mean))[1:20],log2(tapply(INS[,3],OUT1[,3],mean)/tapply(INS[,1],OUT1[,3],mean))[1:20]),
+                     c(gg[1:20],gg[1:20],gg[1:20]),
+                     c(rep(0,length(gg[1:20])),rep(10,length(gg[1:20])),rep(20,length(gg[1:20]))))
+colnames(datax) <- c("RPKM","group","days")
+
+
+p <- ggplot(datax, aes(x=days, y=RPKM,colour=group))
+p <- p + geom_line() + ylim(c(-2.5,2.5)) +geom_point()
+p <- p+ ylab(expression({log[2]("Fold change")}))
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p <- p+ scale_x_continuous(breaks=c(0,10,20))
+p <- p + theme(legend.position = 'none')
+
+p
+ggsave(file = "220825_group_change_bar.pdf", plot = p, width = 7, height = 5)
+#Fig5C
+
+
+
+
+tag <- transposon[,1] > 10 |transposon[,2] > 10 |transposon[,3] > 10
+
+datax <- data.frame( c(log2(transposon[tag,1]/transposon[tag,1]),log2(transposon[tag,2]/transposon[tag,1]),log2(transposon[tag,3]/transposon[tag,1])),
+                     c(rownames(transposon[tag,]),rownames(transposon[tag,]),rownames(transposon[tag,])),
+                     c(rep(0,sum(tag)),rep(10,sum(tag)),rep(20,sum(tag))))
+colnames(datax) <- c("RPKM","group","days")
+
+p <- ggplot(datax, aes(x=days, y=RPKM,group=days))
+p <- p+ geom_boxplot()  
+p <- p+ ylab(expression({log[2]("Fold change")}))
+p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
+p <- p+scale_x_continuous(breaks=c(0,10,20))+scale_y_continuous(limits=c(-4.2,4.2),breaks=c(-4,-2,0,2,4))
+p <- p+ geom_hline(yintercept = 0,col="green")
+p
+ggsave(file = "220829_transposon_change_boxplot.pdf", plot = p, width = 6, height = 3)
+#Fig5D
+
