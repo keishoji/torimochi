@@ -25,7 +25,7 @@ Analysis of BmN4 cells with adipocyte differentiation system
 This script corresponds to Fig. 5 in the paper
 ### (5)Sibling_cells
 Comparative genomic analysis of sibling BmN4 cells
-This script corresponds to Fig. 6 in the paper
+This script corresponds to Fig. S6 in the paper
 
 ## Tools:
 Data analysis was performed with blast+, Bowtie, bwa, bedtools, cutadapt, hisat2, linux command, pigz, R, Rscript, samtools, seqkit, snp-sites and svim.
