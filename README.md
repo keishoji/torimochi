@@ -27,7 +27,7 @@ This script corresponds to Fig. 5 in the paper
 Comparative genomic analysis of sibling BmN4 cells
 This script corresponds to Fig. 6 in the paper
 
-
+## Tools:
 Data analysis was performed with blast+, Bowtie, bwa, bedtools, cutadapt, hisat2, linux command, pigz, R, Rscript, samtools, seqkit, snp-sites and svim.
 R packages used include: Biostrings, circlize, ggplot2, ggsci, ggthemes, RcolorBrewer and Rsamtools.
 
