@@ -1,6 +1,7 @@
-
+## Data used in this study and its accession numbers
 DRR380346: 191113BmN4genome_MINION.fastq
-DRRXXXXXX: 220914_BmY_MinION.fastq
+DRR424238: 220914_BmY_MinION.fastq
+DRR424239: 201105_11line_minion_cat.fastq.gz
 DRR079250: lip0_RNA_R1.fastq, lip0_RNA_R2.fastq
 DRR079251: lip10_RNA_R1.fastq, lip10_RNA_R2.fastq
 DRR079252: lip20_RNA_R1.fastq, lip20_RNA_R2.fastq
@@ -13,8 +14,11 @@ DRR001873: IgG-R_pf.fq.gz
 DRR001878: H3K9me3_pf.fq.gz
 DRR018643: H3K27ac_pf.fq.gz
 
+## Download small RNA seq data
+fastq-dump DRR181866.sra
+mv DRR186503.fastq 181220_P1_Naïve_Total_NaIO4m.fastq
 
-
+## Trimming adaptors
 M="181220_"
 NN="P1_Naïve_Total_NaIO4m"
 for N in  ${NN}; do
@@ -36,13 +40,12 @@ pigz ${M}${N}_trim.fasta
 rm ${M}${N}_trim.fastq
 done
 
-
-
 cutadapt -j 20 -a CATCGATCCTGCAGGCTAGAGACAGATCGGAAGAGCTCGTATGCCGTCTTCTGCTTG --minimum-length 20 -o DRR000974_trim.fastq DRR000974.fastq
 fastq_to_fasta -Q 33 -i DRR000974_trim.fastq -o DRR000974_trim.fasta
 pigz DRR000974_trim.fasta
 
 
+## Data used in this study and its accession numbers
 fastq-dump DRR186503.sra --split-files 
 mv DRR186503_1.fastq DRR186503_NIAS_OV_R1.fastq
 mv DRR186503_2.fastq DRR186503_NIAS_OV_R2.fastq
