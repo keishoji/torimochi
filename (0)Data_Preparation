@@ -23,7 +23,7 @@ fastq-dump DRR181866.sra
 mv DRR186503.fastq 181220_P1_Naïve_Total_NaIO4m.fastq
 
 ########################################
-## Trimming adaptors
+## Trimming adaptors (Examples)
 ########################################
 M="181220_"
 NN="P1_Naïve_Total_NaIO4m"
