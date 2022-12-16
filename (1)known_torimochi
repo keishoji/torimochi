@@ -1,19 +1,33 @@
-
-###################
-#Fig1
-##################
+########################################
+## Fig1
+########################################
 
 #toricore_pm10kb.bed
 Bomo_Chr11	6308509	6337424	core11pm10kb	255	-
 Bomo_Chr12	16558085	16587028	core12pm10kb	255	+
 Bomo_Chr24	5998527	6026860	core24pm10kb	255	+
 
-
+#The 10 kbs regions before and after the sequences homologues to the chromosome 11 torimochi sequence were extracted using BEDTools fastaFromBed
 fastaFromBed -s -bed toricore_pm10kb.bed -fi /home/kshoji/Casper/REFdata/Bomo_genome_assembly.fa -fo toricore_pm10kb.fas
-
 Rscript --slave --vanilla /home/kshoji/Gawain/scripts/fasta2bed.R toricore_pm10kb
 
-#V2
+#The Contents of fasta2bed.R
+--------------------------------
+#Rscript --slave --vanilla /home/kshoji/Gawain/scripts/fasta2bed.R toricore_pm10kb
+args <- commandArgs()
+in_f1 <- args[8]
+library(Biostrings)
+a <- readDNAStringSet(paste(in_f1,".fas",sep=""))
+anames <- rep("N",length(a))
+spl <- strsplit(names(a)," ")
+for(i in 1:length(a)){
+anames[i] <- spl[[i]][[1]]
+}
+write.table(cbind(anames,0,width(a),255,"*","+"),paste(in_f1,".bed",sep=""),quote=F,col.names=F,row.names=F,sep="\t")
+--------------------------------
+
+#mapping by bowtie
+bowtie-build -f /home/kshoji/Gawain/REFdata/toricore_pm10kb.fa toricore_pm10kb
 QQ="toricore_pm10kb"
 for Q in ${QQ};do
 NN="181220_P1_Naïve_Total_NaIO4m 170124_OV1_MLVminus"
@@ -25,7 +39,7 @@ for N in  ${NN}; do
 bamToBed -i ${N}_${Q}.bam > ${N}_${Q}.bed
 rm ${N}_${Q}.sam
 rm ${N}_${Q}.bam
-	awk '$3-$2>22' ${N}_${Q}.bed > ${N}_${Q}_piRNA.bed
+	awk '$3-$2>22' ${N}_${Q}.bed > ${N}_${Q}_piRNA.bed 
 
 coverageBed -b ${N}_${Q}_piRNA.bed -a ${Q}.bed -s -d> ${N}_${Q}_plus.txt
 coverageBed -b ${N}_${Q}_piRNA.bed -a ${Q}.bed -S -d> ${N}_${Q}_minus.txt
@@ -35,10 +49,9 @@ done
 
 
 
+#Calculate total mapped reads
 bowtie-build -f /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa Bomo_genome
-#total mapped reads計算
 
-#V2
 QQ="Bomo_genome"
 for Q in ${QQ};do
 PP="181220_"
@@ -73,7 +86,7 @@ done
 done
 
 
-
+####Open R to create a graphs####
 R
 total <- c(43864953,134261868) #total genome mapped reads
 library(ggplot2)
@@ -173,6 +186,8 @@ p0 <- p0 + geom_vline(xintercept=0,colour="grey")
 
 ggsave(file = "220222_torimochi_piRNA_profile_outside_left.png", plot = p0, dpi = 200, width = 3.5, height = 3.5)
 
+
+####Drow graph of qPCR result
 R
 setwd("~/Desktop/datas/info/torimochi")
 library(ggplot2)
@@ -196,9 +211,11 @@ p <- p + ylab(expression(paste("copy number (",italic(rp49) ," = 1)")))+ xlab("s
 p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
 ggsave(file = "220513_qPCR_fig1h.pdf", plot = p, width = 4, height = 3)
 
-###################
-#FigS1
-##################
+########################################
+## FigS1
+########################################
+
+#Mapping by bowtie
 QQ="toricore_pm10kb"
 for Q in ${QQ};do
 NN="181220_P2_Tri1234-4_Total_NaIO4m"
@@ -220,7 +237,7 @@ done
 
 
 
-
+####Open R to create a graphs####
 R
 library(Biostrings)
 library(Rsamtools)
@@ -269,7 +286,7 @@ ggsave(file = "221108_torimochi_pingpong.png", plot = p0, dpi = 200, width = 6, 
 
 
 
-
+####Open R to create a graphs####
 R
 library(Biostrings)
 library(Rsamtools)
@@ -313,7 +330,7 @@ phsig2 <- phsig[,1:2] + phsig[,3:4]
 phsig3 <- sweep(phsig2,2,apply(phsig2,2,sum),"/") 
 rownames(phsig3) <- 0:19
 
-
+#Calculate ping-pong signatures
 outA0 <- phsig3[c(1,3:20),1]
 mA0 <- phsig3[,1]-mean(outA0)
 mA0/sd(outA0) #1.8250667669
