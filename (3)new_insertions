@@ -87,8 +87,8 @@ INS <- DNAStringSet(unlist(fasC))
 names(AFT) <- paste0("AFT",1:nrow(table))
 names(BEF) <- paste0("BEF",1:nrow(table))
 names(INS) <- paste0("INS",1:nrow(table))
-writeXStringSet(BEF,"200925_newins_BEF597.fas") #Predicted sequence of the inserted sequence before transposition (silkworm genome)
-writeXStringSet(AFT,"200925_newins_AFT597.fas") #Predicted sequence of the inserted sequence after the transfer (BmN4 genome)
+writeXStringSet(BEF,"200925_newins_BEF597.fas") #Predicted sequence without the transposition (silkworm genome)
+writeXStringSet(AFT,"200925_newins_AFT597.fas") #Predicted sequence with the transposition (BmN4 genome)
 writeXStringSet(INS,"200925_newins_INS597.fas") #Predicted insertion sequence
 
 
