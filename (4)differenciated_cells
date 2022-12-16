@@ -1,7 +1,7 @@
-
-###################
-#Fig5
-##################
+########################################
+## Fig. 5
+########################################
+#Mapping by Hisat2
 
 hisat2-build /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa Bomo_genome
 hisat2-build /home/kshoji/Gawain/REFdata/KWMTBOMO.nucl.fa KWMTBOMO
@@ -20,7 +20,7 @@ bamToBed -bed12 -i ${N}_${Q}_HS2.bam > ${N}_${Q}_HS2.bed
 done
 done
 
-#total genome mapped reads
+#Calculate total genome mapped reads
 QQ="Bomo_genome"
 for Q in ${QQ};do
 NN="lip0_RNA lip10_RNA lip20_RNA"
@@ -29,8 +29,6 @@ for N in  ${NN}; do
 cat ${N}_${Q}_HS2.bed | awk -F"\t" '{print $4}' |sort| uniq| wc -l
 done
 done
-
-
 
 
 QQ="KWMTBOMO transposon new_INS597"
@@ -47,7 +45,7 @@ coverageBed -b ${N}_${Q}_HS2.bed -a /home/kshoji/Gawain/REFdata/${Q}.bed > ${N}_
 done
 done
 
-
+####Open R to summarize the results ####
 R
 refs <- c("KWMTBOMO","transposon","new_INS597")
 total<-c(51892468,53316972,73027248)
@@ -66,8 +64,7 @@ write.table(RPKM,paste0("220825_lips_RNA_",refs[i],"_RPKM.txt",sep="\t",quote=F)
 }
 
 
-#########R
-setwd("~/Desktop/datas/info/torimochi")
+####Open R to create a graphs####
 library(ggplot2)
 library(ggthemes)
 library(Biostrings)
