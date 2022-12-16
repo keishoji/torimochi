@@ -11,19 +11,19 @@ https://www.biorxiv.org/content/10.1101/2022.09.07.506900v1
 Correspondence to the accession numbers of the data used in the analysis
 For small RNA libraries, removal of adapter sequences
 
-###(1)known_torimochi
+### (1)known_torimochi
 Analysis using torimochi sequences present in the silkworm genome
 This script corresponds to Fig. 1 and S1 in the paper
-###(2)new_torimochi
+### (2)new_torimochi
 Analysis using some specific torimochi sequences identified using the nanopore sequencer.
 This script corresponds to Fig. 2 and S3 in the paper
-###(3)new_insertions
+### (3)new_insertions
 Analysis using a large number of transposition sequences identified using the nanopore sequencer.
 This script corresponds to Fig. 3, 4, S4 and S5 in the paper
-###(4)differenciated_cells
+### (4)differenciated_cells
 Analysis of BmN4 cells with adipocyte differentiation system
 This script corresponds to Fig. 5 in the paper
-###(5)Sibling_cells
+### (5)Sibling_cells
 Comparative genomic analysis of sibling BmN4 cells
 This script corresponds to Fig. 6 in the paper
 
@@ -32,7 +32,7 @@ Data analysis was performed with blast+, Bowtie, bwa, bedtools, cutadapt, hisat2
 R packages used include: Biostrings, circlize, ggplot2, ggsci, ggthemes, RcolorBrewer and Rsamtools.
 
 
-###The version of tools in PC for Analysis
+### The version of tools in PC for Analysis
 BLAST 2.13.0+
 bowtie version 1.2.3
 bwa 0.7.17-r1198-dirty
@@ -53,7 +53,7 @@ ggplot2 3.3.6
 ggthemes 4.2.4
 Rsamtools 2.10.0
  
-###The version of tools in macbook for graph
+### The version of tools in macbook for graph
 R version 3.4.0
 Biostrings 2.46.0
 circlize 0.4.8
