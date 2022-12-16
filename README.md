@@ -1,4 +1,3 @@
-# 例
 # Overview:
 
 This repository contains the code needed to reproduce the result of the following manuscript:
@@ -33,7 +32,7 @@ Data analysis was performed with blast+, Bowtie, bwa, bedtools, cutadapt, hisat2
 R packages used include: Biostrings, circlize, ggplot2, ggsci, ggthemes, RcolorBrewer and Rsamtools.
 
 
-PC for Analysis
+###The version of tools in PC for Analysis
 BLAST 2.13.0+
 bowtie version 1.2.3
 bwa 0.7.17-r1198-dirty
@@ -54,9 +53,8 @@ ggplot2 3.3.6
 ggthemes 4.2.4
 Rsamtools 2.10.0
  
-macbook
+###The version of tools in macbook for graph
 R version 3.4.0
-
 Biostrings 2.46.0
 circlize 0.4.8
 ggplot2 3.2.1
