@@ -1,12 +1,11 @@
-###################
-#FigSS6
-##################
+########################################
+## Fig. S6
+########################################
+# Svim (align Nanopore reads with ngmlr, then call SVs)
+svim reads --nanopore BmNY_svim /home/kshoji/Gawain/NGSdata/220914_BmY_MinION.fastq.gz /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa            
+#the resul file of variants.vcf -> BmY_variants.vcf
 
-
-svim reads --nanopore BmNY_svim /home/kshoji/Gawain/NGSdata/220914_BmY_MinION.fastq.gz /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa            # align Nanopore reads with ngmlr, then call SVs
-この結果をBmY_variants.vcf
-
-
+#to extract the inserts that have reliable junctions at both ends in BmY_variants.vcf
 R
 library(Biostrings)
 data <- read.table("BmY_variants.vcf")
@@ -55,6 +54,8 @@ colnames(BNDlist6) <- c("dest_chr","dest_start","dest_end","source_chr","source_
 write.table(BNDlist6,"221025_BmY_newins_locilist.txt",quote=F,sep="\t",row.names=T,col.names=T)
 #write.table(BNDlist5,"221025_BmY_newins_locilist_len0.txt",quote=F,sep="\t",row.names=T,col.names=T)
 
+#to extract the inserts that have reliable junctions at both ends in BmQ_variants.vcf
+#BmQ_variants.vcf is the same file of 200825variants.vcf
 R
 library(Biostrings)
 data <- read.table("BmQ_variants.vcf")
@@ -137,9 +138,9 @@ INS <- DNAStringSet(unlist(fasC))
 names(AFT) <- paste0("AFT",1:nrow(table))
 names(BEF) <- paste0("BEF",1:nrow(table))
 names(INS) <- paste0("INS",1:nrow(table))
-writeXStringSet(BEF,"221025_BmQ_newins_BEF.fas")
-writeXStringSet(AFT,"221025_BmQ_newins_AFT.fas")
-writeXStringSet(INS,"221025_BmQ_newins_INS.fas")
+writeXStringSet(BEF,"221025_BmQ_newins_BEF.fas") #Predicted sequence without the transposition (silkworm genome)
+writeXStringSet(AFT,"221025_BmQ_newins_AFT.fas") #Predicted sequence with the transposition (BmN4 genome)
+writeXStringSet(INS,"221025_BmQ_newins_INS.fas") #Predicted insertion sequence
 
 
 R
@@ -175,16 +176,14 @@ INS <- DNAStringSet(unlist(fasC))
 names(AFT) <- paste0("AFT",1:nrow(table))
 names(BEF) <- paste0("BEF",1:nrow(table))
 names(INS) <- paste0("INS",1:nrow(table))
-writeXStringSet(BEF,"221025_BmY_newins_BEF.fas")
-writeXStringSet(AFT,"221025_BmY_newins_AFT.fas")
-writeXStringSet(INS,"221025_BmY_newins_INS.fas")
+writeXStringSet(BEF,"221025_BmY_newins_BEF.fas") #Predicted sequence without the transposition (silkworm genome)
+writeXStringSet(AFT,"221025_BmY_newins_AFT.fas") #Predicted sequence with the transposition (BmN4 genome)
+writeXStringSet(INS,"221025_BmY_newins_INS.fas") #Predicted insertion sequence
 
 
-
+#BLAST annotation of predicted insertion sequences
 makeblastdb -in 221025_BmY_newins_INS.fas -dbtype nucl -hash_index
 makeblastdb -in 221025_BmQ_newins_INS.fas -dbtype nucl -hash_index
-
-
 blastn -num_threads 8 -query 221025_BmY_newins_INS.fas -db 221025_BmY_newins_INS.fas -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 221025_BmY_newins_INS_INS_blastn.out
 blastn -num_threads 8 -query 221025_BmY_newins_INS.fas -db /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 221025_BmY_newins_INS_BomoGenome_blastn.out
 blastn -num_threads 8 -query 221025_BmQ_newins_INS.fas -db 221025_BmQ_newins_INS.fas -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 221025_BmQ_newins_INS_INS_blastn.out
@@ -192,7 +191,8 @@ blastn -num_threads 8 -query 221025_BmQ_newins_INS.fas -db /home/kshoji/Gawain/R
 
 
 
-
+##Summary by R of BLAST annotations of predicted insertion sequences##
+#for BmQ genome
 R
 library(Biostrings)
 table<-read.table("221025_BmQ_newins_locilist.txt")
@@ -241,7 +241,8 @@ colnames(OUT1) <- c("Similar_sites","Similar_area","cluster","length")
 write.table(OUT1,"221025_BmQ_ins_cluster_size.txt",sep="\t",quote=F)
 
 
-
+##Summary by R of BLAST annotations of predicted insertion sequences##
+#for BmY genome
 R
 library(Biostrings)
 table<-read.table("221025_BmY_newins_locilist.txt")
@@ -293,6 +294,7 @@ write.table(OUT1,"221025_BmY_ins_cluster_size.txt",sep="\t",quote=F)
 
 
 
+#Mapping by bwa-mem
 
  bwa index 221025_BmY_newins_BEF.fas
  bwa index 221025_BmQ_newins_BEF.fas
@@ -317,6 +319,7 @@ done
 
 
 
+####Open R to create a graphs####
 
 R
 library(ggplot2)
