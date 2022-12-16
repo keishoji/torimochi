@@ -1,13 +1,13 @@
-
-###############
+########################################
+## Fig. 3
+########################################
 #svim for Fig3
-##############
 svim reads --nanopore BmN4_svim /home/kshoji/Gawain/NGSdata/191113BmN4genome_MINION.fastq /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa            # align Nanopore reads with ngmlr, then call SVs
 
 cd BmN4_svim
-BmN4_svimのvariants.vcfを200825variants.vcfに名前を変更
+#Rename BmN4_svim's variants.vcf to 200825variants.vcf
 
-
+#to extract the 597 inserts that have reliable junctions at both ends in 200825variants.vcf
 R
 library(Biostrings)
 data <- read.table("200825variants.vcf")
@@ -53,7 +53,7 @@ colnames(BNDlist6) <- c("dest_chr","dest_start","dest_end","source_chr","source_
 write.table(BNDlist6,"200925_newins_locilist.txt",quote=F,sep="\t",row.names=T,col.names=T)
 write.table(BNDlist5,"200925_newins_locilist_len0.txt",quote=F,sep="\t",row.names=T,col.names=T)
 
-
+#to extract the sequences of the 597 inserts
 R
 library(Biostrings)
 genome <- readDNAStringSet("/home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa")
@@ -87,15 +87,12 @@ INS <- DNAStringSet(unlist(fasC))
 names(AFT) <- paste0("AFT",1:nrow(table))
 names(BEF) <- paste0("BEF",1:nrow(table))
 names(INS) <- paste0("INS",1:nrow(table))
-writeXStringSet(BEF,"200925_newins_BEF597.fas")
-writeXStringSet(AFT,"200925_newins_AFT597.fas")
-writeXStringSet(INS,"200925_newins_INS597.fas")
+writeXStringSet(BEF,"200925_newins_BEF597.fas") #Predicted sequence of the inserted sequence before transposition (silkworm genome)
+writeXStringSet(AFT,"200925_newins_AFT597.fas") #Predicted sequence of the inserted sequence after the transfer (BmN4 genome)
+writeXStringSet(INS,"200925_newins_INS597.fas") #Predicted insertion sequence
 
 
-
-
-
-
+#BLAST annotation of predicted insertion sequences
 makeblastdb -in /home/kshoji/Gawain/REFdata/transposon -dbtype nucl -hash_index
 makeblastdb -in /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa -dbtype nucl -hash_index
 makeblastdb -in 200925_newins_INS597.fas -dbtype nucl -hash_index
@@ -103,7 +100,7 @@ blastn -num_threads 8 -query 200925_newins_INS597.fas -db /home/kshoji/Gawain/RE
 blastn -num_threads 8 -query 200925_newins_INS597.fas -db 200925_newins_INS597.fas -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 200925_newins_INS597_INS597_blastn.out
 blastn -num_threads 8 -query 200925_newins_INS597.fas -db /home/kshoji/Gawain/REFdata/Bomo_genome_assembly.fa -max_target_seqs 19900000 -evalue 0.01 -outfmt "7 qseqid sseqid length mismatch gapopen qstart qend sstart send evalue qseq sseq"  -out 200925_newins_INS597_BomoGenome_blastn.out
 
-
+##Summary by R of BLAST annotations of predicted insertion sequences##
 R
 library(Biostrings)
 table<-read.table("200925_newins_locilist.txt")
@@ -246,8 +243,7 @@ OUT5 <- OUT4[order(rownames(OUT4)),]
 write.table(OUT4,"220215_ins_cluster_OUT4.txt",sep="\t",quote=F)
 write.table(OUT5,"220215_ins_cluster_OUT5.txt",sep="\t",quote=F)
 
-
-#Fig3A
+####Open R to create a graphs####
 R
 setwd("~/Desktop/datas/info/torimochi")
 library(ggplot2)
@@ -271,6 +267,7 @@ p
 ggsave(file = "220513_insert0_length.pdf", plot = p, width = 5, height = 3.5)
 #Fig3A
 
+####Open R to create a graphs####
 R
 setwd("~/Desktop/datas/info/torimochi")
 library(ggplot2)
@@ -300,9 +297,7 @@ p
 ggsave(file = "220216_inserted_sites2.pdf", plot = p, width = 5, height = 3.5)
 #Fig3C
 
-###################
-#Fig3D S4
-##################
+####Open R to create a graphs####
 R
 library(Biostrings)
 library(ggplot2)
@@ -381,13 +376,13 @@ g <- ggplot(df, aes(x = x1, y = y, xend = x2, yend = y)) +
 scale_x_continuous(breaks=seq(0,xmax,1000))+xlab("length")+ylab(paste(nrow(df),"inserts"))+ theme(axis.ticks = element_blank(),axis.text.y = element_blank())
 ggsave(file = paste0("220601_",names[i],"area.png"), plot =g , dpi = 1000, width = 5, height = 1.5)
 }
+#Fig3D S4
 
+########################################
+## Fig. 4
+########################################
 
-###################
-#Fig4
-##################
-
-
+#Mapping by bowtie
 bowtie-build 200925_newins_INS597.fas new_INS597
 
 #V2
@@ -423,7 +418,7 @@ done
 done
 
 
-
+##open R to summarize of mapping results##
 R
 library(Biostrings)
 fas<-readDNAStringSet("200925_newins_INS597.fas")
@@ -450,6 +445,7 @@ colnames(f) <-  c("BmN4","OV")
 write.table(e,"220222_transpose_piRNA_INS597.txt",quote=F,sep="\t")
 write.table(f,"220222_transpose_RNA_INS597.txt",quote=F,sep="\t")
 
+####Open R to create a graphs####
 R
 setwd("~/Desktop/datas/info/torimochi")
 library(ggplot2)
@@ -539,11 +535,10 @@ p <- p + theme_bw(base_size = 15, base_family = "Helvetica")
 p
 
 ggsave(file = "220222_inserted_RNA_change2.pdf", plot = p, width = 6.6, height = 3.5)
-
-
 #Fig4C
 
 
+#Mapping the ChIP-seq data
 QQ="new_INS597"
 for Q in ${QQ};do
 NN="IgG-R H3K9me3 H3K27ac"
@@ -591,9 +586,9 @@ for N in  ${NN}; do
 cat ${N}_${Q}_HS2.bed | awk -F"\t" '{print $4}' |sort| uniq| wc -l
 done
 done
-#mapped reads
+#calculate mapped reads
 
-
+####Open R to create a graphs####
 R
 library(ggplot2)
 gps <- c(2,3,8,17,4,19,20,16,14,18,5,6,10,15,12,13,1,9,7,11)
@@ -662,10 +657,9 @@ ggsave(file = "220325_inserted_piRNA_change_2e_mod2.pdf", plot = p, width = 3, h
 #Fig4E
 
 
-
-###################
-#FigS5A
-##################
+########################################
+## Fig. S5A
+########################################
 svim reads --nanopore transposon2group /home/kshoji/Gawain/NGSdata/191113BmN4genome_MINION.fastq 221116_transposon1811_groups.fas            # align Nanopore reads with ngmlr, then call SVs
 cp variants.vcf 221116_transposon1811_groupsvariants.vcf
 
