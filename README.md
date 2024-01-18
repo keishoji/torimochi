@@ -4,6 +4,8 @@ This repository contains the code needed to reproduce the result of the followin
 
 Keisuke Shoji, Yusuke Umemura, Susumu Katsuma, Yukihide Tomari, The piRNA cluster torimochi is an expanding transposon in cultured silkworm cells. 
 https://www.biorxiv.org/content/10.1101/2022.09.07.506900v1
+(published in PLOS genetics)
+https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1010632
 
 # Contents:
 
